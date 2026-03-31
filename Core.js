@@ -137,13 +137,13 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     // ----------------------------- System Configuration (Do not modify this part) ---------------------------- //
 
-    var isbannedUser = await checkBan(m.sender);
-    var modcheck = await checkMod(m.sender);
-    var isBannedGroup = await checkBanGroup(m.from);
-    var isAntilinkOn = await checkAntilink(m.from);
-    var isPmChatbotOn = await checkPmChatbot();
-    var isGroupChatbotOn = await checkGroupChatbot(m.from);
-    var botWorkMode = await getBotMode();
+    const isbannedUser = await checkBan(m.sender);
+    const modcheck = await checkMod(m.sender);
+    const isBannedGroup = await checkBanGroup(m.from);
+    const isAntilinkOn = await checkAntilink(m.from);
+    const isPmChatbotOn = await checkPmChatbot();
+    const isGroupChatbotOn = await checkGroupChatbot(m.from);
+    const botWorkMode = await getBotMode();
 
     
     if (isCmd || icmd) {

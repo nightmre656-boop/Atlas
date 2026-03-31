@@ -5,83 +5,62 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import cheerio from 'cheerio';
 
-
-
-function GraphOrg (Path) {
-	return new Promise (async (resolve, reject) => {
-		if (!fs.existsSync(Path)) return reject(new Error("File not Found"))
-		try {
-			const form = new BodyForm();
-			form.append("file", fs.createReadStream(Path))
-			const data = await  axios({
-				url: "https://graph.org/upload",
-				method: "POST",
-				headers: {
-					...form.getHeaders()
-				},
-				data: form
-			})
-			return resolve("https://graph.org" + data.data[0].src)
-		} catch (err) {
-			return reject(new Error(String(err)))
-		}
-	})
+async function GraphOrg(Path) {
+  if (!fs.existsSync(Path)) throw new Error("File not Found");
+  const form = new BodyForm();
+  form.append("file", fs.createReadStream(Path));
+  const data = await axios({
+    url: "https://graph.org/upload",
+    method: "POST",
+    headers: { ...form.getHeaders() },
+    data: form,
+  });
+  return "https://graph.org" + data.data[0].src;
 }
 
-async function UploadFileUgu (input) {
-	return new Promise (async (resolve, reject) => {
-			const form = new BodyForm();
-			form.append("files[]", fs.createReadStream(input))
-			await axios({
-				url: "https://uguu.se/upload.php",
-				method: "POST",
-				headers: {
-					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
-					...form.getHeaders()
-				},
-				data: form
-			}).then((data) => {
-				resolve(data.data.files[0])
-			}).catch((err) => reject(err))
-	})
+async function UploadFileUgu(input) {
+  const form = new BodyForm();
+  form.append("files[]", fs.createReadStream(input));
+  const data = await axios({
+    url: "https://uguu.se/upload.php",
+    method: "POST",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
+      ...form.getHeaders(),
+    },
+    data: form,
+  });
+  return data.data.files[0];
 }
 
-function webp2mp4File(path) {
-	return new Promise((resolve, reject) => {
-		 const form = new BodyForm()
-		 form.append('new-image-url', '')
-		 form.append('new-image', fs.createReadStream(path))
-		 axios({
-			  method: 'post',
-			  url: 'https://s6.ezgif.com/webp-to-mp4',
-			  data: form,
-			  headers: {
-				   'Content-Type': `multipart/form-data; boundary=${form._boundary}`
-			  }
-		 }).then(({ data }) => {
-			  const bodyFormThen = new BodyForm()
-			  const $ = cheerio.load(data)
-			  const file = $('input[name="file"]').attr('value')
-			  bodyFormThen.append('file', file)
-			  bodyFormThen.append('convert', "Convert WebP to MP4!")
-			  axios({
-				   method: 'post',
-				   url: 'https://ezgif.com/webp-to-mp4/' + file,
-				   data: bodyFormThen,
-				   headers: {
-						'Content-Type': `multipart/form-data; boundary=${bodyFormThen._boundary}`
-				   }
-			  }).then(({ data }) => {
-				   const $ = cheerio.load(data)
-				   const result = 'https:' + $('div#output > p.outfile > video > source').attr('src')
-				   resolve({
-						status: true,
-						message: "Created By MRHRTZ",
-						result: result
-				   })
-			  }).catch(reject)
-		 }).catch(reject)
-	})
+async function webp2mp4File(path) {
+  const form = new BodyForm();
+  form.append("new-image-url", "");
+  form.append("new-image", fs.createReadStream(path));
+  const { data: firstData } = await axios({
+    method: "post",
+    url: "https://s6.ezgif.com/webp-to-mp4",
+    data: form,
+    headers: { "Content-Type": `multipart/form-data; boundary=${form._boundary}` },
+  });
+  const $ = cheerio.load(firstData);
+  const file = $('input[name="file"]').attr("value");
+  const bodyFormThen = new BodyForm();
+  bodyFormThen.append("file", file);
+  bodyFormThen.append("convert", "Convert WebP to MP4!");
+  const { data: secondData } = await axios({
+    method: "post",
+    url: "https://ezgif.com/webp-to-mp4/" + file,
+    data: bodyFormThen,
+    headers: {
+      "Content-Type": `multipart/form-data; boundary=${bodyFormThen._boundary}`,
+    },
+  });
+  const $2 = cheerio.load(secondData);
+  const result =
+    "https:" + $2("div#output > p.outfile > video > source").attr("src");
+  return { status: true, message: "Created By MRHRTZ", result };
 }
 
-export default { GraphOrg, UploadFileUgu, webp2mp4File }
+export default { GraphOrg, UploadFileUgu, webp2mp4File };

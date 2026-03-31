@@ -277,21 +277,18 @@ export default {
         break;
 
       case "fact":
-        await doReact("🤓")
-        await axios
-          .get(`https://nekos.life/api/v2/fact`)
-          .then((response) => {
-            const tet = `*『  Random Facts  』* \n\n${response.data.fact}`;
-
-            Atlas.sendMessage(
-              m.from,
-              { image: { url: botImage4 }, caption: tet + "\n" },
-              { quoted: m }
-            );
-          })
-          .catch((err) => {
-            m.reply(`An error occurred.`);
-          });
+        await doReact("🤓");
+        try {
+          const response = await axios.get(`https://nekos.life/api/v2/fact`);
+          const tet = `*『  Random Facts  』* \n\n${response.data.fact}`;
+          await Atlas.sendMessage(
+            m.from,
+            { image: { url: botImage4 }, caption: tet + "\n" },
+            { quoted: m }
+          );
+        } catch (err) {
+          await m.reply(`An error occurred.`);
+        }
         break;
 
       case "awesomecheck":
@@ -310,27 +307,25 @@ export default {
             { text: `Please tag a user to use this command!` },
             { quoted: m }
           );
-        } else if (m.quoted) {
-          var mentionedUser = m.quoted.sender;
-        } else {
-          var mentionedUser = mentionByTag[0];
         }
-        await doReact("👀");
-        const dey = randomNumberPicker(1, 100);
+        {
+          const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
+          await doReact("👀");
+          const dey = randomNumberPicker(1, 100);
+          const Atlastext = `${
+            inputCMD.charAt(0).toUpperCase() + inputCMD.slice(1)
+          } Check Of : @${mentionedUser.split("@")[0]}\n\nAnswer : *${dey}%*`;
 
-        let Atlastext = `${
-          inputCMD.charAt(0).toUpperCase() + inputCMD.slice(1)
-        } Check Of : @${mentionedUser.split("@")[0]}\n\nAnswer : *${dey}%*`;
-
-        Atlas.sendMessage(
-          m.from,
-          {
-            image: { url: botImage3 },
-            caption: Atlastext,
-            mentions: [mentionedUser],
-          },
-          { quoted: m }
-        );
+          Atlas.sendMessage(
+            m.from,
+            {
+              image: { url: botImage3 },
+              caption: Atlastext,
+              mentions: [mentionedUser],
+            },
+            { quoted: m }
+          );
+        }
         break;
 
       case "charactercheck":
@@ -341,44 +336,33 @@ export default {
             { text: `Please tag a user to use this command!` },
             { quoted: m }
           );
-        } else if (m.quoted) {
-          var mentionedUser = m.quoted.sender;
-        } else {
-          var mentionedUser = mentionByTag[0];
         }
-        await doReact("👀");
+        {
+          const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
+          await doReact("👀");
 
-        const userChar = [
-          "Sigma",
-          "Generous",
-          "Grumpy",
-          "Overconfident",
-          "Obedient",
-          "Good",
-          "Simp",
-          "Kind",
-          "Patient",
-          "Pervert",
-          "Cool",
-          "Helpful",
-        ];
+          const userChar = [
+            "Sigma", "Generous", "Grumpy", "Overconfident", "Obedient",
+            "Good", "Simp", "Kind", "Patient", "Pervert", "Cool", "Helpful",
+          ];
 
-        const userCharacterSeletion =
-          userChar[Math.floor(Math.random() * userChar.length)];
+          const userCharacterSeletion =
+            userChar[Math.floor(Math.random() * userChar.length)];
 
-        let Atlastext4 = `Character Check Of : @${
-          mentionedUser.split("@")[0]
-        }\n\nAnswer : *${userCharacterSeletion}*`;
+          const Atlastext4 = `Character Check Of : @${
+            mentionedUser.split("@")[0]
+          }\n\nAnswer : *${userCharacterSeletion}*`;
 
-        Atlas.sendMessage(
-          m.from,
-          {
-            image: { url: botImage3 },
-            caption: Atlastext4,
-            mentions: [mentionedUser],
-          },
-          { quoted: m }
-        );
+          Atlas.sendMessage(
+            m.from,
+            {
+              image: { url: botImage3 },
+              caption: Atlastext4,
+              mentions: [mentionedUser],
+            },
+            { quoted: m }
+          );
+        }
         break;
 
       default:

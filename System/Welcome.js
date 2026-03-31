@@ -2,12 +2,13 @@ import {checkWelcome} from './MongoDB/MongoDb_Core.js';
 
 export default async (Atlas, anu) => {
   try {
-    let metadata = await Atlas.groupMetadata(anu.id);
-    let participants = anu.participants;
+    const metadata = await Atlas.groupMetadata(anu.id);
+    const participants = anu.participants;
     let desc = metadata.desc;
     if (desc == undefined) desc = "No Description";
 
-    for (let num of participants) {
+    for (const num of participants) {
+      let ppuser;
       try {
         ppuser = await Atlas.profilePictureUrl(num, "image");
       } catch {
@@ -16,13 +17,13 @@ export default async (Atlas, anu) => {
 
       if (anu.action == "add") {
         const WELstatus = await checkWelcome(anu.id);
-        let WAuserName = num;
+        const WAuserName = num;
         console.log(
           `\n+${WAuserName.split("@")[0]} Joined/Got Added in: ${
             metadata.subject
           }\n`
         );
-        Atlastext = `
+        const Atlastext = `
 Hello @${WAuserName.split("@")[0]} Senpai,
 
 Welcome to *${metadata.subject}*.
@@ -42,13 +43,13 @@ ${desc}
         }
       } else if (anu.action == "remove") {
         const WELstatus = await checkWelcome(anu.id);
-        let WAuserName = num;
+        const WAuserName = num;
         console.log(
           `\n+${WAuserName.split("@")[0]} Left/Got Removed from: ${
             metadata.subject
           }\n`
         );
-        Atlastext = `
+        const Atlastext = `
   @${WAuserName.split("@")[0]} Senpai left the group.
   `;
         if (WELstatus) {

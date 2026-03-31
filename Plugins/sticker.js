@@ -108,15 +108,16 @@ export default {
           return m.reply(`Please meantion a sticker to steal it.`);
         }
         await doReact("🀄️");
+        let packName, authorName;
         if (!args.join(" ")) {
-          var packName = pushName;
-          var authorName = pushName;
+          packName = pushName;
+          authorName = pushName;
         } else if (args.join(" ").includes(",")) {
-          var packName = args.join(" ").split(",")[0];
-          var authorName = args.join(" ").split(",")[1];
+          packName = args.join(" ").split(",")[0];
+          authorName = args.join(" ").split(",")[1];
         } else {
-          var packName = args.join(" ");
-          var authorName = args.join(" ");
+          packName = args.join(" ");
+          authorName = args.join(" ");
         }
         if (/webp/.test(mime)) {
           let mediaMess = await quoted.download();
@@ -192,9 +193,9 @@ export default {
             );
           }
           await doReact("📮");
-          media = await Atlas.downloadAndSaveMediaMessage(quoted);
-          mem = await TelegraPh(media);
-          meme = `https://api.memegen.link/images/custom/-/${text}.png?background=${mem}`;
+          const media = await Atlas.downloadAndSaveMediaMessage(quoted);
+          const mem = await TelegraPh(media);
+          const meme = `https://api.memegen.link/images/custom/-/${text}.png?background=${mem}`;
 
           let stickerMess = new Sticker(meme, {
             pack: packname,
@@ -230,6 +231,7 @@ export default {
           );
         }
 
+        let userPfp;
         if (m.quoted) {
           try {
             userPfp = await Atlas.profilePictureUrl(m.quoted.sender, "image");
@@ -244,11 +246,11 @@ export default {
           }
         }
         await doReact("📮");
-        var waUserName = pushName;
+        const waUserName = pushName;
 
         const quoteText = m.quoted ? m.quoted.msg : args ? args.join(" ") : "";
 
-        var quoteJson = {
+        const quoteJson = {
           type: "quote",
           format: "png",
           backgroundColor: "#FFFFFF",
@@ -280,7 +282,7 @@ export default {
           }
         );
 
-        fs.writeFileSync(
+        await fs.promises.writeFile(
           "quote.png",
           quoteResponse.data.result.image,
           "base64"
@@ -331,8 +333,8 @@ export default {
         let imgUrl = jsonData.results[0].url;
         //console.log(imgUrl);
 
-        let stcBuff = await getBuffer(imgUrl);
-        fs.writeFileSync("emoji.png", stcBuff);
+        const stcBuff = await getBuffer(imgUrl);
+        await fs.promises.writeFile("emoji.png", stcBuff);
 
         let stickerMess2 = new Sticker("emoji.png", {
           pack: packname,
@@ -350,7 +352,7 @@ export default {
           { sticker: stickerBuffer },
           { quoted: m }
         );
-        await fs.unlinkSync("emoji.png");
+        fs.unlinkSync("emoji.png");
 
         break;
       default:
