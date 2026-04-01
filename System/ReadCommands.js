@@ -4,6 +4,7 @@ const commands = new Collections();
 commands.prefix = global.prefa;
 
 async function readcommands() {
+  commands.clear();
   const cmdfile = fs
     .readdirSync("./Plugins")
     .filter((file) => file.endsWith(".js"));

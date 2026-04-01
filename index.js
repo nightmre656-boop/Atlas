@@ -20,6 +20,7 @@ const app = express();
 const PORT = global.port;
 import welcomeLeft from "./System/Welcome.js";
 import { readcommands, commands } from "./System/ReadCommands.js";
+import core from "./Core.js";
 commands.prefix = global.prefa;
 import mongoose from "mongoose";
 import Auth from "./System/MongoAuth/MongoAuth.js";
@@ -190,7 +191,6 @@ const startAtlas = async () => {
     if (m.key && m.key.remoteJid == "status@broadcast") return;
     if (m.key.id.startsWith("BAE5") && m.key.id.length == 16) return;
 
-    const { default: core } = await import("./Core.js");
     core(Atlas, m, commands, chatUpdate);
   });
 
