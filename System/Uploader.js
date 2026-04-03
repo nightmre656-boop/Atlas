@@ -1,7 +1,6 @@
 import axios from 'axios';
 import BodyForm from 'form-data';
 import { fileTypeFromBuffer } from 'file-type';
-import fetch from 'node-fetch';
 import fs from 'fs';
 import { load as cheerioLoad } from 'cheerio';
 const cheerio = { load: cheerioLoad };

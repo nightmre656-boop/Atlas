@@ -20,7 +20,7 @@ export default {
   start: async (
     Atlas,
     m,
-    { pushName, prefix, inputCMD, doReact, text, args }
+    { pushName, prefix, inputCMD, doReact, text, args },
   ) => {
     const pic = fs.readFileSync("./Assets/Atlas.jpg");
     switch (inputCMD) {
@@ -28,7 +28,7 @@ export default {
       case "sc":
         await doReact("🧣");
         let repoInfo = await axios.get(
-          "https://api.github.com/repos/FantoX/Atlas-MD"
+          "https://api.github.com/repos/FantoX/Atlas-MD",
         );
         let repo = repoInfo.data;
         console.log(repo);
@@ -37,7 +37,7 @@ export default {
         }\n*⭐ Total Stars:* ${repo.stargazers_count}\n*📜 License:* ${
           repo.license.name
         }\n*📁 Repo Size:* ${(repo.size / 1024).toFixed(
-          2
+          2,
         )} MB\n*📅 Last Updated:* ${repo.updated_at}\n\n*🔗 Repo Link:* ${
           repo.html_url
         }\n\n❝ Dont forget to give a Star ⭐ to the repo. It's made with restless hardwork by *Team ATLAS*. ❞\n\n*©️ Team ATLAS- 2023*`;
@@ -107,7 +107,7 @@ export default {
         await Atlas.sendMessage(
           m.from,
           { video: { url: botVideo }, gifPlayback: true, caption: helpText },
-          { quoted: m }
+          { quoted: m },
         );
 
         break;

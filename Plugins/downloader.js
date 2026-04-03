@@ -1,4 +1,4 @@
-import fetch from "node-fetch";
+import axios from "axios";
 
 const TT = /(?<!\S)https?:\/\/(www\.)?(vm\.|vt\.|m\.)?tiktok\.com\/[^\s]+(?=\s|$)/gi;
 const IG = /https?:\/\/(www\.)?instagram\.com\/[^\s]+/gi;
@@ -55,93 +55,80 @@ const ext = (txt) => {
 };
 
 const tt = async (url) => {
-    const res = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
     if (d.code !== 0 || !d.data) throw new Error(d.msg || 'TikTok API error');
     const r = d.data.images?.length ? { type: "image", data: d.data.images } : { type: "video", data: d.data.play };
     return { type: r.type, data: r.data };
 };
 
 const ig = async (url) => {
-    const res = await fetch(`https://api-faa.my.id/faa/igdl?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api-faa.my.id/faa/igdl?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.url) throw new Error(d.message || 'Instagram API error');
     return { urls: d.result.url, isVideo: d.result.metadata?.isVideo };
 };
 
 const pin = async (url) => {
-    const res = await fetch(`https://api-faa.my.id/faa/pin-down?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api-faa.my.id/faa/pin-down?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.medias) throw new Error(d.message || 'Pinterest API error');
     return d.result.medias;
 };
 
 const fb = async (url) => {
-    const res = await fetch(`https://api-faa.my.id/faa/fbdownload?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api-faa.my.id/faa/fbdownload?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.media) throw new Error(d.message || 'Facebook API error');
     return d.result.media;
 };
 
 const tw = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/twitter?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/twitter?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result) throw new Error(d.message || 'Twitter/X API error');
     return { type: d.result.type, data: d.result.download_url };
 };
 
 const vd = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/videy?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/videy?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result) throw new Error(d.message || 'Videy API error');
     return d.result;
 };
 
 const mf = async (url) => {
-    const res = await fetch(`https://api-faa.my.id/faa/mediafire?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api-faa.my.id/faa/mediafire?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result) throw new Error(d.message || 'MediaFire API error');
     return d.result;
 };
 
 const th = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/threads?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/threads?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.media) throw new Error(d.message || 'Threads API error');
     return d.result.media;
 };
 
 const mg = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/mega?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/mega?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result) throw new Error(d.message || 'Mega API error');
     return d.result;
 };
 
 const sc = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/soundcloud?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/soundcloud?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.url) throw new Error(d.message || 'SoundCloud API error');
     return d.result;
 };
 
 const sp = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/spotify?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/spotify?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.url) throw new Error(d.message || 'Spotify API error');
     return d.result;
 };
 
 const yt = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.url) throw new Error(d.message || 'YouTube API error');
     return d.result;
 };
 
 const sf = async (url) => {
-    const res = await fetch(`https://api.nexray.web.id/downloader/sfile?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const { data: d } = await axios.get(`https://api.nexray.web.id/downloader/sfile?url=${encodeURIComponent(url)}`);
     if (!d.status || !d.result || !d.result.url) throw new Error(d.message || 'Sfile API error');
     return d.result;
 };

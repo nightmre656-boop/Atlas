@@ -1,5 +1,4 @@
 import fs from "fs";
-import fetch from "node-fetch";
 import axios from "axios";
 import { Sticker, StickerTypes } from "wa-sticker-formatter";
 import { GraphOrg as TelegraPh } from "../System/Uploader.js";
@@ -324,11 +323,11 @@ export default {
         }
         await doReact("🔖");
         let [emoji1, emoji2] = args[0].split("+");
-        let jsonData = await fetch(
+        let { data: jsonData } = await axios.get(
           `https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&contentfilter=high&media_filter=png_transparent&component=proactive&collection=emoji_kitchen_v5&q=${encodeURIComponent(
             emoji1
           )}_${encodeURIComponent(emoji2)}`
-        ).then((res) => res.json());
+        );
 
         let imgUrl = jsonData.results[0].url;
         //console.log(imgUrl);

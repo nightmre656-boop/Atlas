@@ -61,7 +61,6 @@
     "moment-timezone": "^0.6.1",
     "mongoose": "^9.3.3",
     "mumaker": "^2.0.0",
-    "node-fetch": "^3.3.2",
     "node-id3": "^0.2.9",
     "openai": "^6.33.0",
     "path": "^0.12.7",
