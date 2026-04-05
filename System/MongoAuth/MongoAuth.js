@@ -59,7 +59,7 @@ export default class MongoAuth {
     const saveCreds = async () => {
       await saveCredsLocal();
       await this.pushToMongoDB().catch((err) =>
-        console.error(`[ ATLAS ] MongoDB session sync error: ${err.message}`)
+        console.error(`[ EXCEPTION ] MongoDB session sync error: ${err.message}`)
       );
     };
 
@@ -168,7 +168,7 @@ export default class MongoAuth {
     try {
       parsed = JSON.parse(legacySessionString, BufferJSON.reviver);
     } catch (err) {
-      console.error(`[ ATLAS ] Failed to parse legacy session blob: ${err.message}`);
+      console.error(`[ EXCEPTION ] Failed to parse legacy session blob: ${err.message}`);
       return;
     }
 

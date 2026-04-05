@@ -1,9 +1,12 @@
 import "./Configurations.js";
+import ffmpegStatic from "ffmpeg-static";
+process.env.FFMPEG_PATH = ffmpegStatic;
 import {
   makeWASocket,
   DisconnectReason,
   fetchLatestBaileysVersion,
   downloadContentFromMessage,
+  downloadMediaMessage,
   jidDecode,
 } from "@whiskeysockets/baileys";
 import MongoAuth from "./System/MongoAuth/MongoAuth.js";
@@ -22,6 +25,21 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Write PID so it can always be found/killed
+fs.writeFileSync(path.join(__dirname, "atlas.pid"), process.pid.toString());
+
+// Suppress noisy Baileys internal Signal protocol logs that write directly to console
+const _origLog = console.log;
+console.log = (...args) => {
+  const first = String(args[0] ?? "");
+  if (
+    first.startsWith("Closing session:") ||
+    first.startsWith("Opening session:")
+  )
+    return;
+  _origLog(...args);
+};
+
 import express from "express";
 const app = express();
 const PORT = global.port;
@@ -34,10 +52,12 @@ import qrcode from "qrcode";
 import qrcodeTerminal from "qrcode-terminal";
 import { getPluginURLs } from "./System/MongoDB/MongoDb_Core.js";
 import chalk from "chalk";
-import readline from "readline";
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const question = (text) => new Promise((resolve) => rl.question(text, resolve));
+app.use(express.json());
+
+// Global LID ↔ phone JID map — populated from contacts events at connect time.
+// Core.js uses this to resolve m.sender LIDs to phone JIDs for owner/mod checks.
+global.lidToJidMap = new Map();
 
 // Minimal in-memory store — makeInMemoryStore was removed in Baileys v7
 const store = {
@@ -47,13 +67,43 @@ const store = {
     ev.on("contacts.upsert", (contacts) => {
       for (const contact of contacts) {
         store.contacts[contact.id] = contact;
+        // Build bidirectional LID ↔ phone JID map from all available fields
+        const phoneJid = contact.id?.endsWith("@s.whatsapp.net")
+          ? contact.id
+          : null;
+        const lidJid = contact.id?.endsWith("@lid")
+          ? contact.id
+          : contact.lid?.endsWith("@lid")
+            ? contact.lid
+            : null;
+        if (phoneJid && lidJid) {
+          global.lidToJidMap.set(lidJid, phoneJid);
+          global.lidToJidMap.set(phoneJid, lidJid);
+        }
       }
+      console.log(
+        `[ ATLAS ] LID map populated: ${global.lidToJidMap.size} entries`,
+      );
     });
     ev.on("contacts.update", (updates) => {
       for (const update of updates) {
         if (store.contacts[update.id])
           Object.assign(store.contacts[update.id], update);
         else store.contacts[update.id] = update;
+        const phoneJid = update.id?.endsWith("@s.whatsapp.net")
+          ? update.id
+          : store.contacts[update.id]?.id?.endsWith("@s.whatsapp.net")
+            ? store.contacts[update.id].id
+            : null;
+        const lidJid = update.lid?.endsWith("@lid")
+          ? update.lid
+          : update.id?.endsWith("@lid")
+            ? update.id
+            : null;
+        if (phoneJid && lidJid) {
+          global.lidToJidMap.set(lidJid, phoneJid);
+          global.lidToJidMap.set(phoneJid, lidJid);
+        }
       }
     });
     ev.on("messages.upsert", ({ messages }) => {
@@ -70,23 +120,18 @@ const store = {
 
 // Atlas Server configuration
 let QR_GENERATE = "invalid";
-let status;
+let status = "initializing";
+let AtlasSocket = null; // module-level reference for pairing API
 let mongoAuth; // module-level so the GC/sync interval can access it
 
 const startAtlas = async () => {
   try {
-    await mongoose.connect(mongodb).then(() => {
-      console.log(
-        chalk.greenBright("Establishing secure connection with MongoDB...\n"),
-      );
-    });
+    await mongoose.connect(mongodb);
+    console.log(chalk.green(`[ ATLAS ] MongoDB connected ✓`));
   } catch (err) {
-    console.log(
-      chalk.redBright(
-        "Error connecting to MongoDB ! Please check MongoDB URL or try again after some minutes !\n",
-      ),
+    console.error(
+      chalk.redBright(`[ EXCEPTION ] MongoDB error: ${err.message}`),
     );
-    console.log(err);
   }
   mongoAuth = new MongoAuth(sessionId);
   const { state, saveCreds, clearState } = await mongoAuth.init();
@@ -99,29 +144,40 @@ const startAtlas = async () => {
       whitespaceBreak: true,
     }),
   );
-  console.log(`\n`);
 
-  // --- PAIRING SYSTEM INTEGRATION ---
-  let usePairingCode = false;
-  let phoneNumber = "";
+  // Version info + update check
+  const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
+  global.botVersion = pkg.version;
+  global.latestVersion = pkg.version;
+  global.updateAvailable = false;
 
-  const isSessionExists = state && state.creds && state.creds.me && state.creds.me.id;
+  console.log(
+    chalk.cyan(
+      `[ ATLAS ] v${global.botVersion}  |  Node.js ${process.version}  |  ${process.platform}/${process.arch}`,
+    ),
+  );
 
-  if (!isSessionExists) {
-      console.log(chalk.yellow.bold("\n--- 🔒 LOGIN CONFIGURATION ---"));
-      console.log(chalk.white("1. Scan QR Code"));
-      console.log(chalk.white("2. Use Pairing Code"));
-      
-      let choice = await question(chalk.greenBright("\nEnter option (1 or 2): "));
-
-      if (choice.trim() === '2') {
-          usePairingCode = true;
-          phoneNumber = await question(chalk.greenBright("Enter your WhatsApp Number (e.g. 918888888888): "));
-          phoneNumber = phoneNumber.replace(/[^0-9]/g, ""); 
-          console.log(chalk.magenta(`\nRequesting Pairing Code for: ${phoneNumber}...`));
-      }
+  try {
+    const remote = await got(
+      "https://raw.githubusercontent.com/FantoX/Atlas-MD/main/package.json",
+    ).json();
+    global.latestVersion = remote.version;
+    if (remote.version !== pkg.version) {
+      global.updateAvailable = true;
+      console.log(
+        chalk.yellow(
+          `[ ATLAS ] Update available: v${pkg.version} → v${remote.version}  |  git pull && npm install`,
+        ),
+      );
+    } else {
+      console.log(chalk.green(`[ ATLAS ] Up to date ✓`));
+    }
+  } catch {
+    console.log(
+      chalk.gray(`[ ATLAS ] Update check skipped (network unavailable)`),
+    );
   }
-  // ----------------------------------
+  console.log("");
 
   await installPlugin();
 
@@ -129,51 +185,33 @@ const startAtlas = async () => {
 
   const Atlas = makeWASocket({
     logger: pino({ level: "silent" }),
-    //printQRInTerminal: !usePairingCode,
-    browser: usePairingCode ? ['Ubuntu', 'Chrome', '20.0.04'] : ["Atlas", "Safari", "1.0.0"],
+    browser: ["Ubuntu", "Chrome", "20.0.04"],
     auth: state,
     version,
   });
 
-  // --- REQUEST PAIRING CODE LOGIC ---
-  if (usePairingCode && !isSessionExists) {
-    setTimeout(async () => {
-        try {
-            let code = await Atlas.requestPairingCode(phoneNumber);
-            code = code?.match(/.{1,4}/g)?.join("-") || code;
-            console.log(chalk.black.bgGreen(`\n YOUR PAIRING CODE: `), chalk.black.bgWhite(` ${code} `));
-        } catch (err) {
-            console.log(chalk.red("Error fetching pairing code: " + err.message));
-        }
-    }, 3000);
-  }
-  // ----------------------------------
+  AtlasSocket = Atlas; // expose for pairing API
 
   store.bind(Atlas.ev);
 
   Atlas.public = true;
 
   async function installPlugin() {
-    console.log(chalk.yellow("Checking for Plugins...\n"));
+    console.log(chalk.cyan(`[ ATLAS ] Checking plugins...`));
     let plugins = [];
     try {
       plugins = await getPluginURLs();
     } catch (err) {
-      console.log(
-        chalk.redBright(
-          "Error connecting to MongoDB ! Please re-check MongoDB URL or try again after some minutes !\n",
-        ),
+      console.error(
+        chalk.redBright(`[ EXCEPTION ] Plugin DB error: ${err.message}`),
       );
-      console.log(err);
     }
 
-    if (!plugins.length || plugins.length == 0) {
-      console.log(
-        chalk.redBright("No Extra Plugins Installed ! Starting Atlas...\n"),
-      );
+    if (!plugins.length) {
+      console.log(chalk.gray(`[ ATLAS ] No extra plugins installed`));
     } else {
       console.log(
-        chalk.greenBright(plugins.length + " Plugins found ! Installing...\n"),
+        chalk.cyan(`[ ATLAS ] Installing ${plugins.length} plugin(s)...`),
       );
       for (let i = 0; i < plugins.length; i++) {
         const pluginUrl = plugins[i];
@@ -184,26 +222,23 @@ const startAtlas = async () => {
             const fileName = path.basename(pluginUrl);
             const filePath = path.join(folderName, fileName);
             fs.writeFileSync(filePath, body);
+            console.log(chalk.green(`[ ATLAS ] ✓ ${fileName}`));
           } else {
             console.log(
               chalk.yellow(
-                `[ ATLAS ] Plugin download returned status ${statusCode}: ${pluginUrl}`,
+                `[ ATLAS ] ✗ ${path.basename(pluginUrl)} (HTTP ${statusCode})`,
               ),
             );
           }
         } catch (error) {
-          console.log(
+          console.error(
             chalk.redBright(
-              `[ ATLAS ] Failed to install plugin from ${pluginUrl}: ${error.message}`,
+              `[ EXCEPTION ] ✗ ${path.basename(pluginUrl)}: ${error.message}`,
             ),
           );
         }
       }
-      console.log(
-        chalk.greenBright(
-          "All Plugins Installed Successfully ! Starting Atlas...\n",
-        ),
-      );
+      console.log(chalk.green(`[ ATLAS ] Plugins ready`));
     }
   }
 
@@ -214,6 +249,7 @@ const startAtlas = async () => {
   Atlas.ev.on("connection.update", async (update) => {
     const { lastDisconnect, connection, qr } = update;
     if (connection) {
+      status = connection;
       console.info(`[ ATLAS ] Server Status => ${connection}`);
     }
 
@@ -254,8 +290,9 @@ const startAtlas = async () => {
         );
       }
     }
-    if (qr && !usePairingCode) {
+    if (qr) {
       QR_GENERATE = qr;
+      status = "qr";
       qrcodeTerminal.generate(qr, { small: true });
     }
   });
@@ -340,15 +377,47 @@ const startAtlas = async () => {
     filename,
     attachExtension = true,
   ) => {
-    let quoted = message.msg ? message.msg : message;
-    let mime = (message.msg || message).mimetype || "";
-    let messageType = message.mtype
-      ? message.mtype.replace(/Message/gi, "")
-      : mime.split("/")[0];
-    const stream = await downloadContentFromMessage(quoted, messageType);
-    let buffer = Buffer.from([]);
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, chunk]);
+    let buffer;
+    // Try Baileys v7 high-level download with reupload support first
+    const fakeMsg = message.fakeObj || message;
+    if (fakeMsg.key && fakeMsg.message) {
+      try {
+        buffer = await downloadMediaMessage(
+          fakeMsg,
+          "buffer",
+          {},
+          {
+            logger: {
+              info: () => {},
+              debug: () => {},
+              warn: () => {},
+              error: () => {},
+              child: () => ({
+                info: () => {},
+                debug: () => {},
+                warn: () => {},
+                error: () => {},
+              }),
+            },
+            reuploadRequest: Atlas.updateMediaMessage,
+          },
+        );
+      } catch (e) {
+        // Fall through to legacy method
+      }
+    }
+    // Legacy fallback using downloadContentFromMessage
+    if (!buffer) {
+      let quoted = message.msg ? message.msg : message;
+      let mime = (message.msg || message).mimetype || "";
+      let messageType = message.mtype
+        ? message.mtype.replace(/Message/gi, "")
+        : mime.split("/")[0];
+      const stream = await downloadContentFromMessage(quoted, messageType);
+      buffer = Buffer.from([]);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
     }
     let type = await fileTypeFromBuffer(buffer);
     const trueFileName = attachExtension ? filename + "." + type.ext : filename;
@@ -357,6 +426,35 @@ const startAtlas = async () => {
   };
 
   Atlas.downloadMediaMessage = async (message) => {
+    // Try Baileys v7 high-level download with reupload support first
+    const fakeMsg = message.fakeObj || message;
+    if (fakeMsg.key && fakeMsg.message) {
+      try {
+        return await downloadMediaMessage(
+          fakeMsg,
+          "buffer",
+          {},
+          {
+            logger: {
+              info: () => {},
+              debug: () => {},
+              warn: () => {},
+              error: () => {},
+              child: () => ({
+                info: () => {},
+                debug: () => {},
+                warn: () => {},
+                error: () => {},
+              }),
+            },
+            reuploadRequest: Atlas.updateMediaMessage,
+          },
+        );
+      } catch (e) {
+        // Fall through to legacy method
+      }
+    }
+    // Legacy fallback
     let mime = (message.msg || message).mimetype || "";
     let messageType = message.mtype
       ? message.mtype.replace(/Message/gi, "")
@@ -366,7 +464,6 @@ const startAtlas = async () => {
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk]);
     }
-
     return buffer;
   };
 
@@ -480,9 +577,15 @@ const GC_INTERVAL_MINUTES = Math.max(
 // Periodic MongoDB session sync — runs at the same interval as GC
 const runPeriodicSync = async () => {
   if (mongoAuth) {
-    await mongoAuth.pushToMongoDB().catch((err) =>
-      console.error(chalk.redBright(`[ ATLAS ] MongoDB session sync error: ${err.message}`)),
-    );
+    await mongoAuth
+      .pushToMongoDB()
+      .catch((err) =>
+        console.error(
+          chalk.redBright(
+            `[ ATLAS ] MongoDB session sync error: ${err.message}`,
+          ),
+        ),
+      );
     console.log(chalk.cyan(`[ ATLAS ] Session synced to MongoDB`));
   }
 };
@@ -515,28 +618,57 @@ if (typeof global.gc === "function") {
 
 app.use("/", express.static(join(__dirname, "Frontend")));
 
-app.get("/qr", async (req, res) => {
-  const { session } = req.query;
-  if (!session)
-    return void res
-      .status(404)
-      .setHeader("Content-Type", "text/plain")
-      .send("Please Provide the session ID that you set for authentication !")
-      .end();
-  if (sessionId !== session)
-    return void res
-      .status(404)
-      .setHeader("Content-Type", "text/plain")
-      .send("Invalid session ID ! Please check your session ID !")
-      .end();
-  if (status == "open")
-    return void res
-      .status(404)
-      .setHeader("Content-Type", "text/plain")
-      .send("Session is already in use !")
-      .end();
-  res.setHeader("content-type", "image/png");
-  res.send(await qrcode.toBuffer(QR_GENERATE));
+// --- GUI API Endpoints ---
+
+app.get("/api/status", (req, res) => {
+  res.json({ status });
 });
 
-app.listen(PORT);  
+app.get("/api/qr", async (req, res) => {
+  if (status === "open") {
+    return res.json({ status: "connected" });
+  }
+  if (!QR_GENERATE || QR_GENERATE === "invalid") {
+    return res.json({ status: "waiting" });
+  }
+  try {
+    const qrDataUrl = await qrcode.toDataURL(QR_GENERATE);
+    return res.json({ status: "qr", qr: qrDataUrl });
+  } catch (err) {
+    return res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.post("/api/pair", async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) {
+    return res.status(400).json({ error: "Phone number is required." });
+  }
+  if (status === "open") {
+    return res.status(400).json({ error: "Session is already connected!" });
+  }
+  if (!AtlasSocket) {
+    return res
+      .status(503)
+      .json({ error: "Bot socket is not ready yet. Please wait a moment." });
+  }
+  try {
+    const cleaned = phone.replace(/[^0-9]/g, "");
+    let code = await AtlasSocket.requestPairingCode(cleaned);
+    code = code?.match(/.{1,4}/g)?.join("-") || code;
+    console.log(
+      chalk.black.bgGreen(` PAIRING CODE: `),
+      chalk.black.bgWhite(` ${code} `),
+    );
+    return res.json({ code });
+  } catch (err) {
+    console.error(
+      chalk.red("[ EXCEPTION ] Pairing code error: " + err.message),
+    );
+    return res
+      .status(500)
+      .json({ error: "Failed to generate pairing code: " + err.message });
+  }
+});
+
+app.listen(PORT);

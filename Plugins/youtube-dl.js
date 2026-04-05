@@ -174,8 +174,8 @@ if (inputCMD === "mp4" || inputCMD === "ytmp4" || inputCMD === "video") {
       }
 
     } catch (err) {
-      console.error(err);
+      console.error("[ EXCEPTION ] Error converting to opus:", err);
       m.reply(`❌ Error: ${err.message}`);
     }
   },
-};   
+};

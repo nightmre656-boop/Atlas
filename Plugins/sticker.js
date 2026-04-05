@@ -330,7 +330,7 @@ export default {
         );
 
         let imgUrl = jsonData.results[0].url;
-        //console.log(imgUrl);
+
 
         const stcBuff = await getBuffer(imgUrl);
         await fs.promises.writeFile("emoji.png", stcBuff);

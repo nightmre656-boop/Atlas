@@ -496,12 +496,22 @@ https://gist.githubusercontent.com/FantoX/67035f308b809aaabad8faa001fe473d/raw/7
 <br><br>
     
 ## 🪟 Chat GPT plug-in
-**〽️ Description:** This plugin conatains 2 main Open AI tools which are "**ChatGPT**" and "**Dall-E**" <br><br>
+**〽️ Description:** This plugin conatains 2 main Open AI tools which are "**ChatGPT**" and "**Dall-E**" with automatic public API fallbacks. <br><br>
 **🧲️ Plug-in installation url:** 
 ```
 https://gist.githubusercontent.com/FantoX/04507d2d7411996622513759ea05775d/raw/7d27fc2bb2f6d8a45d3e929e3904c66895d811ad/chat-GPT.js
 ```
 💡 [Plug-in Source Code ↗](https://gist.github.com/FantoX/04507d2d7411996622513759ea05775d)
+<br><br>
+
+## 🪟 Claude AI plug-in
+**〽️ Description:** Official Anthropic Claude AI integration to access the powerful Claude 3 tier of models with fallback capabilities. <br><br>
+**🧲️ Plug-in path:** `ExtraPlugins_/claude.js`
+<br><br>
+
+## 🪟 Gemini AI plug-in
+**〽️ Description:** Official Google Gemini AI integration to access standard fast text generation via gemini-1.5-flash with fallback capabilities. <br><br>
+**🧲️ Plug-in path:** `ExtraPlugins_/gemini.js`
 <br><br>
     
 ## 🪟 Fun Commands plug-in
@@ -581,6 +591,7 @@ https://gist.githubusercontent.com/FantoX/2de67bc72021805417cbd317385ea71a/raw/f
 - Self / Public / Private mode.
 - Single prefix ( "-" ).
 - RPG and Economy added ( More coming soon ).
+- Built-in Generative AI integrations including official ChatGPT, Claude, and Gemini with public API fallbacks for endless conversations.
 - Group Chatbot / Dm Chatbot ( Only reply on quoted messages and and be turned off ).
 - 100+ NSFW commands ( Using my own API ). Visit: [My API Page](https://fantox-api.vercel.app) for more info. 
 - Highest Commands and Features.
@@ -632,7 +643,7 @@ https://gist.githubusercontent.com/FantoX/2de67bc72021805417cbd317385ea71a/raw/f
 - This bot is not made by WhatsApp.inc so overusing this bot may result in WhatsApp account ban.
 - We will only assist you in `Bot Deployment ( Installation or Hosting )`. Not in `Bot Development`.
 - If you Modify this bot and face any issues, I am not responsible for that because it's not possible for me or my team to help everyone in bot Development / Modification. Only modify if you know what you are doing.
-- This bot is made for `Educational / Fun / Group Management` purposes only. I and the team will not be responsible for any misuse of this bot.
+- This bot is made for `Educational / Fun / Group Management` purposes only. Myself and the team will not be responsible for any misuse of this bot.
 - We will only assist you in `Setup / Deployment` of this bot.
 
 <br><br>
@@ -651,7 +662,18 @@ https://gist.githubusercontent.com/FantoX/2de67bc72021805417cbd317385ea71a/raw/f
 <h2 align="center">🔰 Meet Team Atlas 🔰
 </h2>
 
-[![Fantox](https://github.com/FantoX.png)](https://github.com/FantoX)  | [![Ahmii-kun](https://github.com/Ahmii-kun.png)](https://github.com/Ahmii-kun) | [![Pratyush](https://github.com/pratyush4932.png)](https://github.com/pratyush4932) | [![Devime](https://github.com/Devime69.png)](https://github.com/Devime69) | [![Kai](https://github.com/Kai0071.png)](https://github.com/Kai0071) | [![JayJay Ops](https://github.com/jayjay-ops.png)](https://github.com/jayjay-ops)
-----|----|----|----|----|----
-[FantoX](https://github.com/FantoX)  | [Ahmii Kun](https://github.com/Ahmii-kun) | [Pratyush](https://github.com/pratyush4932) | [Devime](https://github.com/Devime69) | [Kai](https://github.com/Kai0071) | [Jayjay Ops](https://github.com/jayjay-ops)
-Owner, Main Developer, Maintainer, Dubugger  | Co-Developer, Co-Maintainer | Support Developer | API Maintainer | Ideas, Testing | Ideas, Testing
+<h3 align="center">Current Moderators</h3>
+
+[![Fantox](https://github.com/FantoX.png)](https://github.com/FantoX) | [![AYUSH](https://github.com/AYUSH-PANDEY023.png)](https://github.com/AYUSH-PANDEY023) | [![RA-ONE](https://github.com/7thRA-ONE.png)](https://github.com/7thRA-ONE) | [![Sten-X](https://github.com/Sten-X.png)](https://github.com/Sten-X)
+----|----|----|----
+[FantoX](https://github.com/FantoX) | [AYUSH-PANDEY023](https://github.com/AYUSH-PANDEY023) | [7thRA-ONE](https://github.com/7thRA-ONE) | [Sten-X](https://github.com/Sten-X)
+Owner, Main Developer, Maintainer | Ideas, Testing | Support Developer, Maintainer | Support Developer, Maintainer (API)
+
+<br>
+
+<h3 align="center">Legacy Contributors</h3>
+
+[![Ahmii-kun](https://github.com/Ahmii-kun.png)](https://github.com/Ahmii-kun) | [![Pratyush](https://github.com/pratyush4932.png)](https://github.com/pratyush4932) | [![Devime](https://github.com/Devime69.png)](https://github.com/Devime69)
+----|----|----
+[Ahmii-kun](https://github.com/Ahmii-kun) | [pratyush4932](https://github.com/pratyush4932) | [Devime69](https://github.com/Devime69)
+Support Developer (Old) | Support Developer (Old) | API Maintainer (Old)

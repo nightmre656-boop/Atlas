@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import {
   banUser,
   checkBan,
@@ -17,7 +19,7 @@ import {
   unbanGroup,
 } from "../System/MongoDB/MongoDb_Core.js";
 
-import { userData } from "../System/MongoDB/MongoDB_Schema.js";
+import { userData, groupData } from "../System/MongoDB/MongoDB_Schema.js";
 
 const mergedCommands = [
   "addmod",
@@ -26,6 +28,8 @@ const mergedCommands = [
   "removemod",
   "modlist",
   "mods",
+  "owners",
+  "owner",
   "ban",
   "banuser",
   "unban",
@@ -41,6 +45,11 @@ const mergedCommands = [
   "unbangc",
   "setbotmode",
   "mode",
+  "getcmd",
+  "getplugin",
+  "cmdfile",
+  "charlist",
+  "characters",
 ];
 
 export default {
@@ -58,6 +67,8 @@ export default {
     "bangroup",
     "unbangroup",
     "mode",
+    "getcmd",
+    "charlist",
   ],
   description: "All Moderator/Owner Commands",
   start: async (
@@ -87,10 +98,20 @@ export default {
       isAdmin,
       pushName,
       groupName,
-    }
+    },
   ) => {
     const isUsermod = await checkMod(m.sender);
-    if (!isCreator && !isintegrated && !isUsermod) {
+    if (
+      !isCreator &&
+      !isintegrated() &&
+      !isUsermod &&
+      inputCMD !== "charlist" &&
+      inputCMD !== "characters" &&
+      inputCMD !== "mods" &&
+      inputCMD !== "modlist" &&
+      inputCMD !== "owners" &&
+      inputCMD !== "owner"
+    ) {
       await doReact("❌");
       return m.reply("Sorry, only my *Mods* can use this command !");
     }
@@ -104,10 +125,10 @@ export default {
         const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
         const userId = mentionedUser;
         const isTargetMod = await checkMod(userId);
-        if (!isCreator && !isintegrated && isTargetMod) {
+        if (!isCreator && !isintegrated() && isTargetMod) {
           await doReact("❌");
           return m.reply(
-            "Sorry, only my *Owner* can use this command ! *Added Mods* does not have this permission."
+            "Sorry, only my *Owner* can use this command ! *Added Mods* does not have this permission.",
           );
         }
         if (!userId) return m.reply("Please mention a valid user to ban!");
@@ -121,7 +142,7 @@ export default {
                 text: `@${userId.split("@")[0]} is already registered as a mod`,
                 mentions: [userId],
               },
-              { quoted: m }
+              { quoted: m },
             );
           }
           await doReact("✅");
@@ -132,10 +153,10 @@ export default {
               text: `@${userId.split("@")[0]} is successfully registered to mods`,
               mentions: [userId],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
-          console.error("[ ATLAS ] addmod error:", err.message);
+          console.error("[ EXCEPTION ] addmod error:", err.message);
           await doReact("❌");
           await m.reply(`An error occurred: ${err.message}`);
         }
@@ -151,10 +172,10 @@ export default {
         const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
         const userId = mentionedUser;
         const isTargetMod = await checkMod(userId);
-        if (!isCreator && !isintegrated && isTargetMod) {
+        if (!isCreator && !isintegrated() && isTargetMod) {
           await doReact("❌");
           return m.reply(
-            "Sorry, only my *Owner* can use this command ! *Added Mods* does not have this permission."
+            "Sorry, only my *Owner* can use this command ! *Added Mods* does not have this permission.",
           );
         }
         if (!userId) return m.reply("Please mention a valid user to ban!");
@@ -168,7 +189,7 @@ export default {
                 text: `@${userId.split("@")[0]} is not registered as a mod !`,
                 mentions: [userId],
               },
-              { quoted: m }
+              { quoted: m },
             );
           }
           await delMod(userId);
@@ -178,10 +199,10 @@ export default {
               text: `@${userId.split("@")[0]} is successfully removed from mods`,
               mentions: [userId],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
-          console.error("[ ATLAS ] delmod error:", err.message);
+          console.error("[ EXCEPTION ] delmod error:", err.message);
           await doReact("❌");
           await m.reply(`An error occurred: ${err.message}`);
         }
@@ -189,6 +210,8 @@ export default {
       }
 
       case "modlist":
+      case "owners":
+      case "owner":
       case "mods": {
         await doReact("✅");
         try {
@@ -234,15 +257,15 @@ export default {
               caption: textM,
               mentions: xyz,
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
-          console.error("[ ATLAS ] modlist error:", err.message);
+          console.error("[ EXCEPTION ] modlist error:", err.message);
           await doReact("❌");
           return Atlas.sendMessage(
             m.from,
             { text: `An internal error occurred while fetching the mod list.` },
-            { quoted: m }
+            { quoted: m },
           );
         }
         break;
@@ -255,12 +278,12 @@ export default {
           return Atlas.sendMessage(
             m.from,
             { text: `Please tag a user to *Ban*!` },
-            { quoted: m }
+            { quoted: m },
           );
         }
         const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -276,6 +299,10 @@ export default {
           await doReact("❌");
           return m.reply(`Sorry, I can't ban an *Owner* or *Mod* !`);
         }
+        if (userId === botNumber || userNum === botNumber.split("@")[0]) {
+          await doReact("❌");
+          return m.reply(`I cannot ban myself!`);
+        }
         if (chechBanStatus) {
           await doReact("✅");
           return Atlas.sendMessage(
@@ -284,7 +311,7 @@ export default {
               text: `@${mentionedUser.split("@")[0]} is already *Banned* !`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         try {
@@ -296,10 +323,10 @@ export default {
               text: `@${mentionedUser.split("@")[0]} has been *Banned* Successfully by *${pushName}*`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
-          console.error("[ ATLAS ] ban error:", err.message);
+          console.error("[ EXCEPTION ] ban error:", err.message);
           await doReact("❌");
           await m.reply(`Failed to ban user: ${err.message}`);
         }
@@ -314,7 +341,7 @@ export default {
         }
         const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -333,10 +360,10 @@ export default {
                 text: `@${mentionedUser.split("@")[0]} has been *Un-Banned* Successfully by *${pushName}*`,
                 mentions: [mentionedUser],
               },
-              { quoted: m }
+              { quoted: m },
             );
           } catch (err) {
-            console.error("[ ATLAS ] unban error:", err.message);
+            console.error("[ EXCEPTION ] unban error:", err.message);
             await doReact("❌");
             await m.reply(`Failed to unban user: ${err.message}`);
           }
@@ -351,17 +378,71 @@ export default {
         break;
       }
 
+      case "banlist":
+      case "listbans": {
+        await doReact("📋");
+        try {
+          const [bannedUsers, bannedGroups] = await Promise.all([
+            userData.find({ ban: true }),
+            groupData.find({ bangroup: true }),
+          ]);
+
+          if (!bannedUsers.length && !bannedGroups.length) {
+            return Atlas.sendMessage(
+              m.from,
+              { text: `  🚫  *${botName} Ban List*  🚫\n\nNo banned users or groups.` },
+              { quoted: m },
+            );
+          }
+
+          let banlistText = `  🚫  *${botName} Ban List*  🚫\n\n`;
+
+          if (bannedUsers.length) {
+            banlistText += `👤 *Banned Users* (${bannedUsers.length})\n\n`;
+            bannedUsers.forEach((u, i) => {
+              banlistText += `  ${i + 1}. @${u.id.split("@")[0]}\n`;
+            });
+          }
+
+          if (bannedGroups.length) {
+            if (bannedUsers.length) banlistText += "\n";
+            banlistText += `👥 *Banned Groups* (${bannedGroups.length})\n\n`;
+            for (let i = 0; i < bannedGroups.length; i++) {
+              const gid = bannedGroups[i].id;
+              let gname = gid;
+              try {
+                const meta = await Atlas.groupMetadata(gid);
+                gname = meta.subject || gid;
+              } catch {}
+              banlistText += `  ${i + 1}. ${gname}\n`;
+            }
+          }
+
+          const mentions = bannedUsers.map((u) => u.id);
+          await Atlas.sendMessage(
+            m.from,
+            { text: banlistText, mentions },
+            { quoted: m },
+          );
+        } catch (err) {
+          console.error("[ EXCEPTION ] banlist error:", err.message);
+          await doReact("❌");
+          await m.reply(`An error occurred while fetching the ban list.`);
+        }
+        break;
+      }
+
       case "setchar": {
         if (!text) {
           await doReact("❌");
           return Atlas.sendMessage(
             m.from,
             { text: `Please enter a character number between 0-19 to set !` },
-            { quoted: m }
+            { quoted: m },
           );
         }
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -375,13 +456,30 @@ export default {
           return Atlas.sendMessage(
             m.from,
             { text: `Please enter a character number between 0-19 to set !` },
-            { quoted: m }
+            { quoted: m },
           );
         }
         const botNames = [
-          "Atlas MD", "Power", "Makima", "Denji", "Zero Two", "Chika",
-          "Miku", "Marin", "Ayanokoji", "Ruka", "Mizuhara", "Rem", "Sumi",
-          "Kaguya", "Yumeko", "Kurumi", "Mai", "Yor", "Shinbou", "Eiko",
+          "Atlas MD",
+          "Power",
+          "Makima",
+          "Denji",
+          "Zero Two",
+          "Chika",
+          "Miku",
+          "Marin",
+          "Ayanokoji",
+          "Ruka",
+          "Mizuhara",
+          "Rem",
+          "Sumi",
+          "Kaguya",
+          "Yumeko",
+          "Kurumi",
+          "Mai",
+          "Yor",
+          "Shinbou",
+          "Eiko",
         ];
         const botLogos = [
           "https://wallpapercave.com/wp/wp5924545.jpg",
@@ -415,7 +513,7 @@ export default {
               image: { url: botLogos[intinput] },
               caption: `Character number *${intinput}* - *${botNames[intinput]}* is already default !`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         await doReact("✅");
@@ -426,9 +524,42 @@ export default {
             image: { url: botLogos[intinput] },
             caption: `Character number *${intinput}* - *${botNames[intinput]}* has been set Successfully by *${pushName}*`,
           },
-          { quoted: m }
+          { quoted: m },
         );
         break;
+      }
+
+      case "charlist":
+      case "characters": {
+        await doReact("📃");
+        const botNames = [
+          "Atlas MD",
+          "Power",
+          "Makima",
+          "Denji",
+          "Zero Two",
+          "Chika",
+          "Miku",
+          "Marin",
+          "Ayanokoji",
+          "Ruka",
+          "Mizuhara",
+          "Rem",
+          "Sumi",
+          "Kaguya",
+          "Yumeko",
+          "Kurumi",
+          "Mai",
+          "Yor",
+          "Shinbou",
+          "Eiko",
+        ];
+        let charListMenu = `  🎀  *${botName} Characters*  🎀\n\n`;
+        for (let i = 0; i < botNames.length; i++) {
+          charListMenu += `  [ ${i} ] :  *${botNames[i]}*\n`;
+        }
+        charListMenu += `\n*Select a character ID and use* \`${prefix}setchar <ID>\` *to set it.*`;
+        return Atlas.sendMessage(m.from, { text: charListMenu }, { quoted: m });
       }
 
       case "dmchatbot":
@@ -436,11 +567,11 @@ export default {
         if (!text) {
           await doReact("❌");
           return m.reply(
-            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}pmchatbot on`
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}pmchatbot on`,
           );
         }
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -459,7 +590,7 @@ export default {
           }
           await activateChatBot();
           await m.reply(
-            `*PM Chatbot* has been *Enabled* Successfully ! \n\nBot will reply to all chats in PM !`
+            `*PM Chatbot* has been *Enabled* Successfully ! \n\nBot will reply to all chats in PM !`,
           );
         } else if (args[0] === "off") {
           if (!pmChatBotStatus) {
@@ -474,7 +605,7 @@ export default {
         } else {
           await doReact("❌");
           return m.reply(
-            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}pmchatbot on`
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}pmchatbot on`,
           );
         }
         break;
@@ -487,7 +618,7 @@ export default {
           return m.reply(`This command can only be used in groups !`);
         }
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -515,7 +646,7 @@ export default {
           return m.reply(`This command can only be used in groups !`);
         }
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -541,11 +672,11 @@ export default {
         if (!text) {
           await doReact("❌");
           return m.reply(
-            `Please provide *Self / Private / Public* mode names !\n\n*Example:*\n\n${prefix}mode public`
+            `Please provide *Self / Private / Public* mode names !\n\n*Example:*\n\n${prefix}mode public`,
           );
         }
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Owners* and *Mods* can use this command !`,
@@ -558,7 +689,7 @@ export default {
           if (chechbotMode == "self") {
             await doReact("❌");
             return m.reply(
-              `Bot is already in *Self* mode !\n\nOnly *Bot Hoster (Bot number)* can use bot.`
+              `Bot is already in *Self* mode !\n\nOnly *Bot Hoster (Bot number)* can use bot.`,
             );
           }
           await doReact("🧩");
@@ -568,7 +699,7 @@ export default {
           if (chechbotMode == "private") {
             await doReact("❌");
             return m.reply(
-              `Bot is already in *Private* mode !\n\nOnly bot *Owners / Mods* can use bot.`
+              `Bot is already in *Private* mode !\n\nOnly bot *Owners / Mods* can use bot.`,
             );
           }
           await doReact("🧩");
@@ -578,7 +709,7 @@ export default {
           if (chechbotMode == "public") {
             await doReact("❌");
             return m.reply(
-              `Bot is already in *Public* mode !\n\nAnyone can use bot.`
+              `Bot is already in *Public* mode !\n\nAnyone can use bot.`,
             );
           }
           await doReact("🧩");
@@ -587,9 +718,57 @@ export default {
         } else {
           await doReact("❌");
           return m.reply(
-            `Please provide *Self / Private / Public* mode names !\n\n*Example:*\n\n${prefix}mode public`
+            `Please provide *Self / Private / Public* mode names !\n\n*Example:*\n\n${prefix}mode public`,
           );
         }
+        break;
+      }
+
+      case "getcmd":
+      case "getplugin":
+      case "cmdfile": {
+        if (!text) {
+          return m.reply(`Example:\n\n${prefix}getcmd runtime`);
+        }
+
+        try {
+          const pluginDir = "./Plugins";
+
+          const files = fs.readdirSync(pluginDir);
+
+          let foundFile = null;
+
+          for (const file of files) {
+            const data = fs.readFileSync(path.join(pluginDir, file), "utf8");
+
+            if (data.includes(`"${text}"`) || data.includes(`'${text}'`)) {
+              foundFile = file;
+              break;
+            }
+          }
+
+          if (!foundFile) {
+            await doReact("❌");
+            return m.reply("❌ Command plugin not found");
+          }
+
+          const filePath = path.join(pluginDir, foundFile);
+
+          await doReact("🧩");
+          await Atlas.sendMessage(
+            m.from,
+            {
+              document: fs.readFileSync(filePath),
+              fileName: foundFile,
+              mimetype: "text/javascript",
+            },
+            { quoted: m },
+          );
+        } catch (e) {
+          await doReact("❌");
+          m.reply(`Error: ${e.message}`);
+        }
+
         break;
       }
 

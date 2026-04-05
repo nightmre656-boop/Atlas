@@ -18,7 +18,7 @@ async function readcommands() {
       }
       commands.set(cmdfiles.name, cmdfiles);
     } catch (err) {
-      console.error(`[ ATLAS ] Failed to load plugin ${file}: ${err.message}`);
+      console.error(`[ EXCEPTION ] Failed to load plugin ${file}: ${err.message}`);
     }
   }
 }

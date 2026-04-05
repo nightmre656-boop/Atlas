@@ -2,6 +2,8 @@ import "./Configurations.js";
 import "./System/BotCharacters.js";
 import chalk from "chalk";
 import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
+import { getGeminiConfig, GEMINI_MODEL } from "./System/__system_prompt.js";
 import { QuickDB, JSONDriver } from "quick.db";
 import Levels from "discord-xp";
 import {
@@ -21,7 +23,6 @@ export default async (Atlas, m, commands, chatUpdate) => {
     const jsonDriver = new JSONDriver();
     const db = new QuickDB({ driver: jsonDriver });
 
-    //Levels.setURL(mongodb);
     let { type, isGroup, sender, from } = m;
     let body =
       type == "buttonsResponseMessage"
@@ -76,9 +77,35 @@ export default async (Atlas, m, commands, chatUpdate) => {
       ? groupAdmins.includes(m.sender) ||
         groupAdmins.includes(sanitize(m.sender))
       : false;
-    const isCreator = [botIdClean, ...global.owner]
-      .map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net")
-      .includes(m.sender.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+    // Baileys v7 LID resolution: m.sender is a LID (@lid).
+    // The phone JID is available from:
+    //   1. m.key.participantAlt (set by Baileys on every group message)
+    //   2. participant.phoneNumber (in group metadata)
+    //   3. Atlas.user.id (if sender is the bot itself)
+    let resolvedSender = m.sender;
+    if (m.sender.endsWith("@lid")) {
+      if (m.key?.participantAlt?.endsWith("@s.whatsapp.net")) {
+        resolvedSender = sanitize(m.key.participantAlt);
+      } else if (m.isGroup) {
+        const pMatch = participants.find(
+          (p) => sanitize(p.id) === sanitize(m.sender) && p.phoneNumber
+        );
+        if (pMatch) resolvedSender = sanitize(pMatch.phoneNumber);
+      }
+      if (resolvedSender === m.sender && sanitize(m.sender) === botLid) {
+        resolvedSender = botIdClean;
+      }
+      // Cache for future lookups
+      if (resolvedSender !== m.sender) {
+        global.lidToJidMap.set(sanitize(m.sender), resolvedSender);
+      }
+    }
+    const ownerDigits = new Set(
+      [botIdClean, ...global.owner].map((v) => v.replace(/[^0-9]/g, ""))
+    );
+    const isCreator =
+      ownerDigits.has(resolvedSender.replace(/[^0-9]/g, "")) ||
+      ownerDigits.has(m.sender.replace(/[^0-9]/g, ""));
     const messSender = m.sender;
     const itsMe = m.sender.includes(botIdClean.split("@")[0]);
     const groupAdmin = groupAdmins;
@@ -134,33 +161,38 @@ export default async (Atlas, m, commands, chatUpdate) => {
         ? m.message.extendedTextMessage.contextInfo.mentionedJid
         : [];
 
+    const timeNow = new Date().toLocaleTimeString();
+    const dateNow = new Date().toLocaleDateString();
+    const timePrefix = chalk.black(chalk.bgCyan(`[ ${dateNow} - ${timeNow} ]`));
+
+    // In Baileys v7, JIDs can be LIDs (@lid) instead of phone numbers (@s.whatsapp.net)
+    const displayJid = (jid) => {
+      if (!jid) return "unknown";
+      const [local, domain] = jid.split("@");
+      if (domain === "lid") return `LID:${local}`;
+      return "+" + local.split(":")[0];
+    };
+
     if (m.message && isGroup) {
       console.log(
-        "" + "\n" + chalk.black(chalk.bgWhite("[ GROUP ]")),
-        chalk.black(
-          chalk.bgBlueBright(isGroup ? metadata.subject : m.pushName),
-        ) +
-          "\n" +
-          chalk.black(chalk.bgWhite("[ SENDER ]")),
-        chalk.black(chalk.bgBlueBright(m.pushName)) +
-          "\n" +
-          chalk.black(chalk.bgWhite("[ MESSAGE ]")),
-        chalk.black(chalk.bgBlueBright(body || type)) + "\n" + "",
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ GROUP ]")) + " " +
+        chalk.black(chalk.bgBlueBright(isGroup ? metadata.subject : m.pushName)) + "\n" +
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ SENDER ]")) + " " +
+        chalk.black(chalk.bgBlueBright(m.pushName)) + "\n" +
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ MESSAGE ]")) + " " +
+        chalk.black(chalk.bgBlueBright(body || type))
       );
     }
     if (m.message && !isGroup) {
       console.log(
-        "" + "\n" + chalk.black(chalk.bgWhite("[ PRIVATE CHAT ]")),
-        chalk.black(chalk.bgRedBright("+" + m.from.split("@")[0])) +
-          "\n" +
-          chalk.black(chalk.bgWhite("[ SENDER ]")),
-        chalk.black(chalk.bgRedBright(m.pushName)) +
-          "\n" +
-          chalk.black(chalk.bgWhite("[ MESSAGE ]")),
-        chalk.black(chalk.bgRedBright(body || type)) + "\n" + "",
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ PRIVATE ]")) + " " +
+        chalk.black(chalk.bgRedBright(displayJid(m.from))) + "\n" +
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ SENDER ]")) + " " +
+        chalk.black(chalk.bgRedBright(m.pushName)) + "\n" +
+        `${timePrefix} ` + chalk.black(chalk.bgWhite("[ MESSAGE ]")) + " " +
+        chalk.black(chalk.bgRedBright(body || type))
       );
     }
-    //if (body.startsWith(prefix) && !icmd)  return Atlas.sendMessage(m.from, { text: "Baka no such command" });
 
     // ----------------------------- System Configuration (Do not modify this part) ---------------------------- //
 
@@ -175,33 +207,21 @@ export default async (Atlas, m, commands, chatUpdate) => {
     if (isCmd || icmd) {
       if (botWorkMode == "private") {
         if (!isCreator && !modcheck) {
-          return console.log(`\nCommand Rejected ! Bot is in Private mode !\n`);
+          return console.log(`${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " + chalk.black(chalk.bgYellow(`Private mode — ${m.pushName} (${body})`)));
         }
       }
       if (botWorkMode == "self") {
         if (m.sender != botNumber) {
-          return console.log(`\nCommand Rejected ! Bot is in Self mode !\n`);
+          return console.log(`${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " + chalk.black(chalk.bgYellow(`Self mode — ${m.pushName} (${body})`)));
         }
       }
     }
 
+    const infoCommands = ["mods", "modlist", "owner", "owners", "support", "supportgc"];
+
     if (isCmd || icmd) {
-      if (
-        isbannedUser &&
-        budy != `${prefix}support` &&
-        budy != `${prefix}supportgc` &&
-        budy != `${prefix}owner` &&
-        budy != `${prefix}mods` &&
-        budy != `${prefix}mod` &&
-        budy != `${prefix}modlist`
-      ) {
-        return Atlas.sendMessage(
-          m.from,
-          {
-            text: `You are banned from using commands !`,
-          },
-          { quoted: m },
-        );
+      if (isbannedUser && !isCreator && !modcheck) {
+        return; // Silently ignore banned users
       }
     }
 
@@ -210,21 +230,9 @@ export default async (Atlas, m, commands, chatUpdate) => {
         isBannedGroup &&
         budy != `${prefix}unbangc` &&
         budy != `${prefix}unbangroup` &&
-        body.startsWith(prefix) &&
-        budy != `${prefix}support` &&
-        budy != `${prefix}supportgc` &&
-        budy != `${prefix}owner` &&
-        budy != `${prefix}mods` &&
-        budy != `${prefix}mod` &&
-        budy != `${prefix}modlist`
+        !isCreator && !modcheck && !infoCommands.includes(inputCMD)
       ) {
-        return Atlas.sendMessage(
-          m.from,
-          {
-            text: `This group is banned from using commands !`,
-          },
-          { quoted: m },
-        );
+        return; // Silently ignore in banned groups (except contact/info commands)
       }
     }
 
@@ -268,17 +276,60 @@ export default async (Atlas, m, commands, chatUpdate) => {
       }
     }
 
+    const fetchGeminiReply = async (promptText) => {
+      const fetchFallback = async (text) => {
+        try {
+          const url = `https://api-faa.my.id/faa/gemini-ai?text=${encodeURIComponent(text)}`;
+          const response = await axios.get(url);
+          if (response.data && response.data.status) {
+            return response.data.result;
+          }
+        } catch (e) {
+          console.error("Fallback API failed:", e.message);
+        }
+        return null;
+      };
+
+      const geminiKey = global.pickKey(global.geminiAPIKeys);
+      let responseText = null;
+
+      if (geminiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: geminiKey });
+          const result = await ai.models.generateContent({
+            model: GEMINI_MODEL,
+            config: getGeminiConfig(),
+            contents: [{ role: "user", parts: [{ text: promptText }] }],
+          });
+          responseText = result.text;
+        } catch (err) {
+          console.log(
+            "Gemini API rejected, falling back to 3rd party API...\nError:",
+            err.message || err,
+          );
+          responseText = await fetchFallback(promptText);
+        }
+      } else {
+        console.log("No valid Gemini key provided, utilizing fallback API.");
+        responseText = await fetchFallback(promptText);
+      }
+      return responseText ? responseText.trim() : "Service unavailable at the moment.";
+    };
+
     if (m.isGroup && !isCmd && !icmd) {
       let txtSender = m.quoted ? m.quoted.sender : mentionByTag[0];
-      if (isGroupChatbotOn == true && txtSender == botNumber) {
+      const senderClean = sanitize(txtSender);
+      const isBotMentioned = txtSender && (
+        senderClean === botIdClean ||
+        senderClean === botLid ||
+        txtSender === botNumber
+      );
+      if (isGroupChatbotOn == true && isBotMentioned) {
         try {
-          const botreply = await axios.get(
-            `http://api.brainshop.ai/get?bid=172352&key=vTmMboAxoXfsKEQQ&uid=[uid]&msg=[${budy}]`,
-          );
-          const txtChatbot = `${botreply.data.cnt}`;
-          setTimeout(function () {
-            m.reply(txtChatbot);
-          }, 2200);
+          await Atlas.sendPresenceUpdate('composing', m.from);
+          const txtChatbot = await fetchGeminiReply(budy);
+          m.reply(txtChatbot);
+          await Atlas.sendPresenceUpdate('paused', m.from);
         } catch (e) {
           console.error("[ ATLAS ] Group chatbot error:", e.message);
         }
@@ -288,13 +339,10 @@ export default async (Atlas, m, commands, chatUpdate) => {
     if (!m.isGroup && !isCmd && !icmd) {
       if (isPmChatbotOn == true) {
         try {
-          const botreply = await axios.get(
-            `http://api.brainshop.ai/get?bid=172352&key=vTmMboAxoXfsKEQQ&uid=[uid]&msg=[${budy}]`,
-          );
-          const txtChatbot = `${botreply.data.cnt}`;
-          setTimeout(function () {
-            m.reply(txtChatbot);
-          }, 2200);
+          await Atlas.sendPresenceUpdate('composing', m.from);
+          const txtChatbot = await fetchGeminiReply(budy);
+          m.reply(txtChatbot);
+          await Atlas.sendPresenceUpdate('paused', m.from);
         } catch (e) {
           console.error("[ ATLAS ] PM chatbot error:", e.message);
         }

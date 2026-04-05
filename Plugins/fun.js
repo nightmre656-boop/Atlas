@@ -1,52 +1,16 @@
 import axios from "axios";
 
-let mergedCommands = [
-  "truth",
-  "dare",
-  "coinflip",
-  "dice",
-  "fact",
-  "awesomecheck",
-  "charactercheck",
-  "cutecheck",
-  "gaycheck",
-  "greatcheck",
-  "handsomecheck",
-  "hornycheck",
-  "lesbiancheck",
-  "maturecheck",
-  "prettycheck",
-  "staminacheck",
-  "uglycheck",
-];
+let mergedCommands = ["truth", "dare", "coinflip", "dice", "fact"];
 
 export default {
   name: "fun",
   alias: [...mergedCommands],
-  uniquecommands: [
-    "truth",
-    "dare",
-    "coinflip",
-    "dice",
-    "fact",
-    "awesomecheck",
-    "charactercheck",
-    "cutecheck",
-    "gaycheck",
-    "greatcheck",
-    "handsomecheck",
-    "hornycheck",
-    "lesbiancheck",
-    "maturecheck",
-    "prettycheck",
-    "staminacheck",
-    "uglycheck",
-  ],
+  uniquecommands: ["truth", "dare", "coinflip", "dice", "fact"],
   description: "All fun Commands",
   start: async (
     Atlas,
     m,
-    { text, args, prefix, inputCMD, mentionedJid, mentionByTag,doReact }
+    { text, args, prefix, inputCMD, mentionedJid, mentionByTag, doReact },
   ) => {
     function randomNumberPicker(min, max) {
       return Math.floor(Math.random() * (max - min + 1) + min);
@@ -55,189 +19,221 @@ export default {
       case "truth":
         await doReact("🤔");
         const truth = [
-          "Have you ever liked anyone? How long?",
-          "If you can or if you want, which gc/outside gc would you make friends with? (maybe different/same type)",
-          "apa ketakutan terbesar kamu?",
-          "Have you ever liked someone and felt that person likes you too?",
-          "What is the name of your friend's ex-girlfriend that you used to secretly like?",
-          "Have you ever stolen money from your father or mom? The reason?",
-          "What makes you happy when you're sad?",
-          "Ever had a one sided love? if so who? how does it feel bro?",
-          "been someone's mistress?",
-          "the most feared thing",
-          "Who is the most influential person in your life?",
-          "what proud thing did you get this year",
-          "Who is the person who can make you awesome",
-          "Who is the person who has ever made you very happy?",
-          "Who is closest to your ideal type of partner here",
-          "Who do you like to play with??",
-          "Have you ever rejected people? the reason why?",
-          "Mention an incident that made you hurt that you still remember",
-          "What achievements have you got this year??",
-          "What's your worst habit at school??",
-          "What song do you sing most in the shower",
-          "Have you ever had a near-death experience",
-          "When was the last time you were really angry. Why?",
-          "Who is the last person who called you",
-          "Do you have any hidden talents, What are they",
-          "What word do you hate the most?",
-          "What is the last YouTube video you watched?",
-          "What is the last thing you Googled",
-          "Who in this group would you want to swap lives with for a week",
-          "What is the scariest thing thats ever happened to you",
-          "Have you ever farted and blamed it on someone else",
-          "When is the last time you made someone else cry",
-          "Have you ever ghosted a friend",
-          "Have you ever seen a dead body",
-          "Which of your family members annoys you the most and why",
-          "If you had to delete one app from your phone, which one would it be",
-          "What app do you waste the most time on",
-          "Have you ever faked sick to get home from school",
-          "What is the most embarrassing item in your room",
-          "What five items would you bring if you got stuck on a desert island",
-          "Have you ever laughed so hard you peed your pants",
-          "Do you smell your own farts",
-          "have u ever peed on the bed while sleeping ðŸ¤£ðŸ¤£",
-          "What is the biggest mistake you have ever made",
-          "Have you ever cheated in an exam",
-          "What is the worst thing you have ever done",
-          "When was the last time you cried",
-          "whom do you love the most among ur parents",
-          "do u sometimes put ur finger in ur nosetrilðŸ¤£",
-          "who was ur crush during the school days",
-          "tell honestly, do u like any boy in this grup",
-          "have you ever liked anyone? how long?",
-          "do you have gf/bf','what is your biggest fear?",
-          "have you ever liked someone and felt that person likes you too?",
-          "What is the name of your ex boyfriend of your friend that you once liked quietly?",
-          "ever did you steal your mothers money or your fathers money",
-          "what makes you happy when you are sad",
-          "do you like someone who is in this grup? if you then who?",
-          "have you ever been cheated on by people?",
-          "who is the most important person in your life",
-          "what proud things did you get this year",
-          "who is the person who can make you happy when u r sad",
-          "who is the person who ever made you feel uncomfortable",
-          "have you ever lied to your parents",
-          "do you still like ur ex",
-          "who do you like to play together with?",
-          "have you ever stolen big thing in ur life? the reason why?",
-          "Mention the incident that makes you hurt that you still remember",
-          "what achievements have you got this year?",
-          "what was your worst habit at school?",
-          "do you love the bot creator Fantox?",
-          "have you ever thought of taking revenge from ur teacher?",
-          "do you like current prime minister of ur country",
-          "you non veg or veg",
-          "if you could be invisible, what is the first thing you would do",
-          "what is a secret you kept from your parents",
-          "Who is your secret crush",
-          "whois the last person you creeped on social media",
-          "If a genie granted you three wishes, what would you ask for",
-          "What is your biggest regret",
-          "What animal do you think you most look like",
-          "How many selfies do you take a day",
-          "What was your favorite childhood show",
-          "if you could be a fictional character for a day, who would you choose",
-          "whom do you text the most",
-          "What is the biggest lie you ever told your parents",
-          "Who is your celebrity crush",
-          "Whats the strangest dream you have ever had",
-          "do you play pubg, if you then send ur id number",
+          "What is your biggest fear?",
+          "Have you ever lied to get out of trouble?",
+          "What is the most embarrassing thing you've ever done?",
+          "Have you ever kept a secret from your best friend?",
+          "What is a habit you have that you think is weird?",
+          "Who is your secret crush?",
+          "What's the worst lie you've ever told?",
+          "Have you ever cheated on a test?",
+          "What's the most childish thing you still do?",
+          "Have you ever peed in the pool?",
+          "What is the most awkward text you've ever sent?",
+          "If you could trade places with someone for a day, who would it be?",
+          "What is the scariest dream you have ever had?",
+          "Have you ever broken something and blamed it on someone else?",
+          "What's the longest you've gone without brushing your teeth?",
+          "What's a secret you've never told anyone?",
+          "Who in this group do you think is the smartest?",
+          "Have you ever ghosted someone?",
+          "What is your worst habit?",
+          "Have you ever laughed at an inappropriate time?",
+          "What's your biggest regret in life?",
+          "Do you sing in the shower? If so, what?",
+          "Have you ever snooped through someone else's phone?",
+          "What was the most awkward romantic moment of your life?",
+          "Have you ever skipped school?",
+          "Who was your first crush?",
+          "What is your silliest fear?",
+          "Have you ever practiced kissing in the mirror?",
+          "What is the most embarrassing nickname you've ever had?",
+          "What is the most annoying thing about your best friend?",
+          "Have you ever felt jealous of a friend? Why?",
+          "Have you ever accidentally sent a text to the wrong person?",
+          "What is the grossest thing you've ever eaten?",
+          "Who is the most annoying person you know?",
+          "What's a trend you followed that you now regret?",
+          "Have you ever faked an illness to get out of an event?",
+          "What is the strangest dream you've had about someone in this group?",
+          "Who do you think is the best looking in this group?",
+          "What is the worst gift you have ever received?",
+          "Have you ever cried while watching a movie? Which one?",
+          "What is a song you secretly love but pretend to hate?",
+          "If you had to delete one app from your phone, what would it be?",
+          "What is the most time you've spent on social media in a day?",
+          "Have you ever dropped food on the floor and eaten it?",
+          "What is your biggest insecurity?",
+          "Have you ever tried to look cool and completely failed?",
+          "What is the weirdest thing you do when you are alone?",
+          "Who was your worst teacher and why?",
+          "Have you ever eavesdropped on a private conversation?",
+          "What is the most trouble you've ever been in?",
+          "What was your most embarrassing outfit?",
+          "Have you ever laughed so hard you cried?",
+          "What is a lie you told that escalated way too far?",
+          "Have you ever stolen anything?",
+          "Who is the last person you searched for on Instagram?",
+          "What is the worst date you've ever been on?",
+          "Have you ever used someone for your own gain?",
+          "Who is someone you pretend to like but actually don't?",
+          "What is the most embarrassing thing your parents have caught you doing?",
+          "What's the strangest thing you've ever bought?",
+          "Have you ever ruined a surprise party?",
+          "What's the silliest reason you ever got mad at someone?",
+          "What is your worst texting habit?",
+          "Who do you text the most?",
+          "What is the weirdest thing in your room?",
+          "Have you ever had a crush on a fictional character?",
+          "What is something you do that you think nobody else does?",
+          "Have you ever accidentally liked an old photo of someone you were stalking?",
+          "Who in this group makes you laugh the most?",
+          "What is the dumbest thing you ever believed as a child?",
+          "Have you ever shoplifted?",
+          "What's your weirdest shower thought?",
+          "What is a phobia you have that is completely irrational?",
+          "If you could only eat one food for the rest of your life, what would it be?",
+          "What's the most embarrassing thing you've texted to your crush?",
+          "Have you ever had a paranormal experience?",
+          "Who is the one person you regret dating?",
+          "What was the biggest rumor spread about you?",
+          "Have you ever spread a rumor about someone else?",
+          "What is something you're glad your family doesn't know about you?",
+          "Do you have a hidden talent? What is it?",
+          "Have you ever completely forgotten what you were talking about mid-sentence?",
+          "Have you ever fallen asleep in public?",
+          "What is the longest you've ever stayed awake?",
+          "What's the weirdest food combination you enjoy?",
+          "If you won the lottery tomorrow, what's the first thing you would buy?",
+          "What is a movie you've watched more than 5 times?",
+          "Have you ever cried to get out of a speeding ticket or trouble?",
+          "What's the strangest rumor you've heard about yourself?",
+          "Have you ever snuck out of the house?",
+          "What's the worst thing you ever said to someone?",
+          "Who would you call to help you bury a body?",
+          "Do you ever talk to yourself in the mirror?",
+          "Have you ever lied about your age?",
+          "What is your guiltiest pleasure?",
+          "If your life was a movie, what would the title be?",
+          "Have you ever pretended to be sick to stay home?",
+          "What is something you do that annoys people?",
+          "Have you ever tripped and fallen in public? What happened?",
+          "Who do you secretly stalk on social media?",
+          "What's the most ridiculous thing you've bought online?",
         ];
         const truthData = truth[Math.floor(Math.random() * truth.length)];
 
         await Atlas.sendMessage(
           m.from,
           { image: { url: botImage3 }, caption: `*${truthData}*` },
-          { quoted: m }
+          { quoted: m },
         );
         break;
 
       case "dare":
         await doReact("😎");
         const dare = [
-          "eat 2 tablespoons of rice without any side dishes, if it's dragging you can drink",
-          "spill people who make you pause",
-          "call crush/pickle now and send ss",
-          "drop only emote every time you type on gc/pc for 1 day.",
-          "say Welcome to Who Wants To Be a Millionaire! to all the groups you have",
-          "call ex saying miss",
-          "sing the chorus of the last song you played",
-          "vn your ex/crush/girlfriend, says hi (name), wants to call, just a moment. I miss🥺👉🏼👈🏼",
-          "Bang on the table (which is at home) until you get scolded for being noisy",
-          "Tell random people - I was just told I was your twin first, we separated, then I had plastic surgery. And this is the most ciyusss_ thing",
-          "mention ex's name",
-          "make 1 rhyme for the members!",
-          "send ur whatsapp chat list",
-          "chat random people with gheto language then ss here",
-          "tell your own version of embarrassing things",
-          "tag the person you hate",
-          "Pretending to be possessed, for example: possessed by dog, possessed by grasshoppers, possessed by refrigerator, etc.",
-          "change name to *I AM DONKEY* for 24 hours",
-          "shout *ma chuda ma chuda ma chuda* in front of your house",
-          "snap/post boyfriend photo/crush",
-          "tell me your boyfriend type!",
-          "say *i hv crush on you, do you want to be my girlfriend?* to the opposite sex, the last time you chatted (submit on wa/tele), wait for him to reply, if you have, drop here",
-          "record ur voice that read *titar ke age do titar, titar ke piche do titar*",
-          "prank chat ex and say *i love u, please come back.* without saying dare!",
-          "chat to contact wa in the order according to your battery %, then tell him *i am lucky to hv you!*",
-          "change the name to *I am a child of randi* for 5 hours",
-          "type in bengali 24 hours",
-          "Use selmon bhoi photo for 3 days",
-          "drop a song quote then tag a suitable member for that quote",
-          "send voice note saying can i call u baby?",
-          "ss recent call whatsapp",
-          "Say *YOU ARE SO BEAUTIFUL DON'T LIE* to guys!",
-          "pop to a group member, and say fuck you",
-          "Act like a chicken in front of ur parents",
-          "Pick up a random book and read one page out loud in vn n send it here",
-          "Open your front door and howl like a wolf for 10 seconds",
-          "Take an embarrassing selfie and paste it on your profile picture",
-          "Let the group choose a word and a well known song. You have to sing that song and send it in voice note",
-          "Walk on your elbows and knees for as long as you can",
-          "sing national anthem in voice note",
-          "Breakdance for 30 seconds in the sitting room😂",
-          "Tell the saddest story you know",
-          "make a twerk dance video and put it on status for 5mins",
-          "Eat a raw piece of garlic",
-          "Show the last five people you texted and what the messages said",
-          "put your full name on status for 5hrs",
-          "make a short dance video without any filter just with a music and put it on ur status for 5hrs",
-          "call ur bestie, bitch",
-          "put your photo without filter on ur status for 10mins",
-          "say i love oli london in voice note🤣🤣",
-          "Send a message to your ex and say I still like you",
-          "call Crush/girlfriend/bestie now and screenshot here",
-          "pop to one of the group member personal chat and Say you ugly bustard",
-          "say YOU ARE BEAUTIFUL/HANDSOME to one of person who is in top of ur pinlist or the first person on ur chatlist",
-          "send voice notes and say, can i call u baby, if u r boy tag girl/if girl tag boy",
-          "write i love you (random grup member name, who is online) in personal chat, (if u r boy write girl name/if girl write boy name) take a snap of the pic and send it here",
-          "use any bollywood actor photo as ur pfp for 3 days",
-          "put your crush photo on status with caption, this is my crush",
-          "change name to I AM GAY for 5 hours",
-          "chat to any contact in whatsapp and say i will be ur bf/gf for 5hours",
-          "send voice note says i hv crush on you, want to be my girlfriend/boyfriend or not? to any random person from the grup(if u girl choose boy, if boy choose girl",
-          "slap ur butt hardly send the sound of slap through voice note😂",
-          "state ur gf/bf type and send the photo here with caption, ugliest girl/boy in the world",
-          "shout bravooooooooo and send here through voice note",
-          "snap your face then send it here",
-          "Send your photo with a caption, i am lesbian",
-          "shout using harsh words and send it here through vn",
-          "shout you bastard in front of your mom/papa",
-          "change the name to i am idiot for 24 hours",
-          "slap urself firmly and send the sound of slap through voice note😂",
-          "say i love the bot owner Fantox through voice note",
-          "send your gf/bf pic here",
-          "make any tiktok dance challenge video and put it on status, u can delete it after 5hrs",
-          "breakup with your best friend for 5hrs without telling him/her that its a dare",
-          "tell one of your frnd that u love him/her and wanna marry him/her, without telling him/her that its a dare",
-          "say i love depak kalal through voice note",
-          "write i am feeling horny and put it on status, u can delete it only after 5hrs",
-          "write i am lesbian and put it on status, u can delete only after 5hrs",
-          "kiss your mommy or papa and say i love you😌",
-          "put your father name on status for 5hrs",
-          "send abusive words in any grup, excepting this grup, and send screenshot proof here",
+          "Do a silly dance for 30 seconds.",
+          "Let someone write a word on your forehead.",
+          "Eat a raw slice of onion.",
+          "Try to juggle 3 items of the group's choosing.",
+          "Speak in a weird accent for the next 3 rounds.",
+          "Let the group look through your photo gallery for 1 minute.",
+          "Post a completely random and meaningless status right now.",
+          "Send a strange emoji to the 5th person in your contacts.",
+          "Bark like a dog for 10 seconds.",
+          "Try to lick your elbow.",
+          "Hold your breath for 15 seconds.",
+          "Call a random number and sing Happy Birthday.",
+          "Let someone tickle you for 30 seconds.",
+          "Eat a spoonful of hot sauce.",
+          "Draw a mustache on your face with a pen.",
+          "Wear your socks on your hands for the next 10 minutes.",
+          "Talk without closing your mouth for the next 2 rounds.",
+          "Spin around 10 times and then try to walk in a straight line.",
+          "Let the group give you a funny new nickname and call you by it.",
+          "Act like a monkey until it's your turn again.",
+          "Send an 'I love you' text to a random contact.",
+          "Take a selfie making the ugliest face possible and post it.",
+          "Hold a plank position for 30 seconds.",
+          "Do 20 jumping jacks.",
+          "Smell the inside of someone else's shoe.",
+          "Gulp down a glass of water without using your hands.",
+          "Let someone style your hair in a weird way.",
+          "Try to breakdance.",
+          "Speak entirely in rhyme for the next 5 minutes.",
+          "Eat a spoonful of mustard.",
+          "Only use sign language for the next round.",
+          "Recite the alphabet backwards.",
+          "Balance a spoon on your nose for 10 seconds.",
+          "Keep your eyes closed until your next turn.",
+          "Sing everything you say for the next 3 rounds.",
+          "Try doing the worm.",
+          "Try to touch your toes without bending your knees for 30 seconds.",
+          "Talk to an imaginary friend for 1 minute.",
+          "Act like a statue for 1 minute.",
+          "Try to sneeze on command.",
+          "Say the alphabet aloud while doing squats.",
+          "Eat a slice of lemon without making a face.",
+          "Brush your teeth with mustard.",
+          "Let someone else type a message and send it from your phone.",
+          "Put ice cubes in your shirt for 1 minute.",
+          "Pretend to be a waiter and take everyone's 'order'.",
+          "Attempt to do a cartwheel.",
+          "Act like a robot for the next 5 minutes.",
+          "Put your clothes on backward.",
+          "Act like you are swimming on the floor.",
+          "Attempt to do 10 pushups.",
+          "Sing a song as loudly as you can.",
+          "Let someone draw on your arm with a pen.",
+          "Hold hands with the person next to you for 3 rounds.",
+          "Stand on one leg for 1 minute.",
+          "Try to touch your nose with your tongue.",
+          "Read the last text you received out loud.",
+          "Make up a poem about the person to your left.",
+          "Call your mom and tell her you love her.",
+          "Pretend you are an airplane for 1 minute.",
+          "Try to whistle a popular song.",
+          "Eat a mixture of ketchup and mayonnaise.",
+          "Speak with your tongue sticking out for the next round.",
+          "Try to catch an imaginary fly.",
+          "Pretend you're a weather reporter and give a dramatic forecast.",
+          "Act like an old person for the next 5 minutes.",
+          "Let someone blindfold you and feed you something out of the fridge.",
+          "Try to say a tongue twister 5 times fast.",
+          "Tell a really bad dad joke.",
+          "Pretend to cry for 30 seconds.",
+          "Dance with a broomstick or mop.",
+          "Give a dramatic reading of a random article.",
+          "Call a friend and speak completely in gibberish.",
+          "Wear a funny hat for the rest of the game.",
+          "Pretend to be an alien communicating with humans for the first time.",
+          "Put on a blindfold and try to guess what an object is.",
+          "Mime being trapped in a box.",
+          "Roar like a lion as loudly as you can.",
+          "Pretend you are a superhero and explain your origin story.",
+          "Go outside and yell 'I believe in fairies!'.",
+          "Try to balance a book on your head and walk across the room.",
+          "Act out your favorite movie scene.",
+          "Speak in an extremely high-pitched voice.",
+          "Talk like a pirate for the next 3 statements.",
+          "Pretend to be a cat and purr at someone.",
+          "Give a 1-minute speech on why the sky is blue.",
+          "Walk backward for the next 5 minutes.",
+          "Do your best impression of a famous celebrity.",
+          "Act like you have a hairball.",
+          "Let the group choose an object for you to sell to them.",
+          "Pretend to ride a horse around the room.",
+          "Lay on the floor and act like a sizzling piece of bacon.",
+          "Eat a handful of dry oats.",
+          "Pretend to be a baby until your next turn.",
+          "Let someone put an ice cube down your back.",
+          "Give someone a piggyback ride.",
+          "Try to lick your toes.",
+          "Do 15 sit-ups.",
+          "Talk as if you are underwater for 2 minutes.",
+          "Let the group wrap you in toilet paper.",
+          "Do an impression of a baby crying.",
         ];
 
         const dareData = dare[Math.floor(Math.random() * dare.length)];
@@ -245,12 +241,12 @@ export default {
         await Atlas.sendMessage(
           m.from,
           { image: { url: botImage3 }, caption: `*${dareData}*` },
-          { quoted: m }
+          { quoted: m },
         );
         break;
 
       case "coinflip":
-        await doReact("🧫️")
+        await doReact("🧫️");
         let result = Math.floor(Math.random() * 2) + 1;
         if (result === 1) {
           await Atlas.sendMessage(m.from, { text: "Heads" }, { quoted: m });
@@ -260,19 +256,19 @@ export default {
         break;
 
       case "dice":
-        await doReact("🎲️")
+        await doReact("🎲️");
         let max = parseInt(args[0]);
         if (!max)
           return Atlas.sendMessage(
             m.from,
             { text: "Please provide a maximum number of sides for the dice." },
-            { quoted: m }
+            { quoted: m },
           );
         let roll = Math.floor(Math.random() * max) + 1;
         Atlas.sendMessage(
           m.from,
           { text: `You rolled a ${roll}!` },
-          { quoted: m }
+          { quoted: m },
         );
         break;
 
@@ -284,84 +280,10 @@ export default {
           await Atlas.sendMessage(
             m.from,
             { image: { url: botImage4 }, caption: tet + "\n" },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
           await m.reply(`An error occurred.`);
-        }
-        break;
-
-      case "awesomecheck":
-      case "cutecheck":
-      case "gaycheck":
-      case "greatcheck":
-      case "prettycheck":
-      case "uglycheck":
-      case "staminacheck":
-      case "maturecheck":
-      case "lesbiancheck":
-        if (!text && !m.quoted) {
-          await doReact("❌");
-          return Atlas.sendMessage(
-            m.from,
-            { text: `Please tag a user to use this command!` },
-            { quoted: m }
-          );
-        }
-        {
-          const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
-          await doReact("👀");
-          const dey = randomNumberPicker(1, 100);
-          const Atlastext = `${
-            inputCMD.charAt(0).toUpperCase() + inputCMD.slice(1)
-          } Check Of : @${mentionedUser.split("@")[0]}\n\nAnswer : *${dey}%*`;
-
-          Atlas.sendMessage(
-            m.from,
-            {
-              image: { url: botImage3 },
-              caption: Atlastext,
-              mentions: [mentionedUser],
-            },
-            { quoted: m }
-          );
-        }
-        break;
-
-      case "charactercheck":
-        if (!text && !m.quoted) {
-          await doReact("❌");
-          return Atlas.sendMessage(
-            m.from,
-            { text: `Please tag a user to use this command!` },
-            { quoted: m }
-          );
-        }
-        {
-          const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
-          await doReact("👀");
-
-          const userChar = [
-            "Sigma", "Generous", "Grumpy", "Overconfident", "Obedient",
-            "Good", "Simp", "Kind", "Patient", "Pervert", "Cool", "Helpful",
-          ];
-
-          const userCharacterSeletion =
-            userChar[Math.floor(Math.random() * userChar.length)];
-
-          const Atlastext4 = `Character Check Of : @${
-            mentionedUser.split("@")[0]
-          }\n\nAnswer : *${userCharacterSeletion}*`;
-
-          Atlas.sendMessage(
-            m.from,
-            {
-              image: { url: botImage3 },
-              caption: Atlastext4,
-              mentions: [mentionedUser],
-            },
-            { quoted: m }
-          );
         }
         break;
 

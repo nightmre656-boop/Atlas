@@ -5,7 +5,7 @@ import { exec } from "child_process";
 import fs from "fs";
 import ffmpegPath from "ffmpeg-static";
 import PDFDocument from "pdfkit";
-import { GraphOrg } from "../System/Uploader.js";
+import { CatboxUpload } from "../System/Uploader.js";
 import { getBuffer } from "../System/Function2.js";
 
 import util from "util";
@@ -33,14 +33,13 @@ export default {
     "toaudio",
     "tourl",
     "topdf",
-    "imgtopdf",
     "toqr",
   ],
   description: "All converter related commands",
   start: async (
     Atlas,
     m,
-    { inputCMD, text, quoted, doReact, prefix, mime }
+    { inputCMD, text, quoted, doReact, prefix, mime },
   ) => {
     switch (inputCMD) {
       case "toimg":
@@ -48,7 +47,7 @@ export default {
         if (!m.quoted && !/webp/.test(mime)) {
           await doReact("❔");
           return m.reply(
-            `Please reply to a *Non-animated* sticker to convert it to image`
+            `Please reply to a *Non-animated* sticker to convert it to image`,
           );
         }
         await doReact("🎴");
@@ -62,7 +61,7 @@ export default {
               {
                 text: `Please mention a *Non-animated* sticker to process ! \n\nOr use *${prefix}togif* / *${prefix}tomp4* to process *Animated* sticker !`,
               },
-              { quoted: m }
+              { quoted: m },
             );
             return;
           }
@@ -70,7 +69,7 @@ export default {
           Atlas.sendMessage(
             m.from,
             { image: buffer, caption: `_Converted by:_  *${botName}*\n` },
-            { quoted: m }
+            { quoted: m },
           );
           fs.unlinkSync(ran);
         });
@@ -80,7 +79,7 @@ export default {
         if (!m.quoted && !/webp/.test(mime)) {
           await doReact("❔");
           return m.reply(
-            `Please reply to an *Animated* sticker to convert it to video !`
+            `Please reply to an *Animated* sticker to convert it to video !`,
           );
         }
         await doReact("🎴");
@@ -89,9 +88,11 @@ export default {
 
         // Validation to prevent crash if result is null
         if (!webpToMp4 || !webpToMp4.result) {
-            fs.unlinkSync(mediaMess2);
-            await doReact("❌");
-            return m.reply("❌ Error: Failed to convert sticker to video. The server might be down or the file is too large.");
+          fs.unlinkSync(mediaMess2);
+          await doReact("❌");
+          return m.reply(
+            "❌ Error: Failed to convert sticker to video. The server might be down or the file is too large.",
+          );
         }
 
         await Atlas.sendMessage(
@@ -100,7 +101,7 @@ export default {
             video: { url: webpToMp4.result },
             caption: `_Converted by:_  *${botName}*\n`,
           },
-          { quoted: m }
+          { quoted: m },
         );
         fs.unlinkSync(mediaMess2);
         break;
@@ -109,7 +110,7 @@ export default {
         if (!m.quoted && !/webp/.test(mime)) {
           await doReact("❔");
           return m.reply(
-            `Please reply to an *Animated* sticker to convert it to gif !`
+            `Please reply to an *Animated* sticker to convert it to gif !`,
           );
         }
         await doReact("🎴");
@@ -118,9 +119,11 @@ export default {
 
         // Validation to prevent crash if result is null
         if (!webpToMp42 || !webpToMp42.result) {
-            fs.unlinkSync(mediaMess3);
-            await doReact("❌");
-            return m.reply("❌ Error: Failed to convert sticker to GIF. Please try again later.");
+          fs.unlinkSync(mediaMess3);
+          await doReact("❌");
+          return m.reply(
+            "❌ Error: Failed to convert sticker to GIF. Please try again later.",
+          );
         }
 
         await Atlas.sendMessage(
@@ -130,7 +133,7 @@ export default {
             caption: `_Converted by:_  *${botName}*\n`,
             gifPlayback: true,
           },
-          { quoted: m }
+          { quoted: m },
         );
         fs.unlinkSync(mediaMess3);
         break;
@@ -139,19 +142,19 @@ export default {
         if (/document/.test(mime)) {
           await doReact("❌");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`,
           );
         }
         if (!/video/.test(mime) && !/audio/.test(mime)) {
           await doReact("❌");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`,
           );
         }
         if (!m.quoted) {
           await doReact("❔");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption ${prefix}tomp3`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption ${prefix}tomp3`,
           );
         }
         await doReact("🎶");
@@ -165,7 +168,7 @@ export default {
             mimetype: "audio/mpeg",
             fileName: `Converted By ${botName} ${m.id}.mp3`,
           },
-          { quoted: m }
+          { quoted: m },
         );
 
         break;
@@ -174,19 +177,19 @@ export default {
         if (/document/.test(mime)) {
           await doReact("❌");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`,
           );
         }
         if (!/video/.test(mime) && !/audio/.test(mime)) {
           await doReact("❌");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption *${prefix}tomp3*`,
           );
         }
         if (!m.quoted) {
           await doReact("❔");
           return m.reply(
-            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption ${prefix}tomp3`
+            `Send/Reply Video/Audio You Want To Convert Into MP3 With Caption ${prefix}tomp3`,
           );
         }
         await doReact("🎶");
@@ -196,45 +199,41 @@ export default {
         Atlas.sendMessage(
           m.from,
           { audio: audio2, mimetype: "audio/mpeg" },
-          { quoted: m }
+          { quoted: m },
         );
         break;
 
       case "tourl":
-        if (!m.quoted) {
+        if (!/image|video|audio|document|octet|application/.test(mime)) {
           await doReact("❔");
           return m.reply(
-            `Plese provide an *Image* / *Video* to generate a link! With Caption ${prefix}tourl`
+            `Please send or reply to an *Image* / *Video* / *Audio* / *Document* to generate a link! With Caption ${prefix}tourl \n\n*Max file size*: 200MB`,
           );
         }
-        let media5 = await Atlas.downloadAndSaveMediaMessage(quoted);
-        if (/image/.test(mime)) {
-          await doReact("🔗");
-          let anu = await GraphOrg(media5);
-          m.reply(`*Generated Image URL:* \n\n${util.format(anu)}\n`);
-        } else if (/video/.test(mime)) {
-          await doReact("▶️");
+        await doReact("🔗");
+        {
+          let media5;
           try {
-            let anu = await GraphOrg(media5);
-            m.reply(`*Generated Video URL:* \n\n${util.format(anu)}\n`);
+            media5 = await Atlas.downloadAndSaveMediaMessage(quoted);
+            let url = await CatboxUpload(media5);
+            let mediaType = /image/.test(mime)
+              ? "Image"
+              : /video/.test(mime)
+                ? "Video"
+                : /audio/.test(mime)
+                  ? "Audio"
+                  : "File";
+            m.reply(`*Generated ${mediaType} URL:* \n\n${url}\n`);
           } catch (e) {
+            console.error("[ EXCEPTION ] Tourl error:", e.message);
             await doReact("❌");
-            fs.unlinkSync(media5);
-            return Atlas.sendMessage(
-              m.from,
-              {
-                text: `*Your video size is too big!*\n\n*Max video size:* 5MB`,
-              },
-              { quoted: m }
+            m.reply(
+              `*Upload failed!* \n\nThe media could not be downloaded or uploaded. Please try sending the file again.`,
             );
+          } finally {
+            if (media5 && fs.existsSync(media5)) fs.unlinkSync(media5);
           }
-        } else {
-          await doReact("❌");
-          return m.reply(
-            `Plese provide an *Image* / *Video* to generate a link!`
-          );
         }
-        await fs.unlinkSync(media5);
         break;
 
       case "topdf":
@@ -266,7 +265,7 @@ export default {
 
           try {
             let randomFileName = `./${Math.floor(
-              Math.random() * 1000000000
+              Math.random() * 1000000000,
             )}.pdf`;
             const pdfPATH = randomFileName;
             await generatePDF(pdfPATH);
@@ -280,7 +279,7 @@ export default {
                   document: pdf,
                   fileName: `Converted By ${botName}.pdf`,
                 },
-                { quoted: m }
+                { quoted: m },
               );
 
               fs.unlinkSync(mediaMess4);
@@ -288,9 +287,9 @@ export default {
             }, 1000);
           } catch (error) {
             await doReact("❌");
-            console.error(error);
+            console.error("[ EXCEPTION ]", error);
             return m.reply(
-              `An error occurred while converting the image to PDF.`
+              `An error occurred while converting the image to PDF.`,
             );
           }
         } else {
@@ -302,17 +301,18 @@ export default {
         if (!text) {
           await doReact("❔");
           return m.reply(
-            `Please provide an URL to convert into QR code!\n\nExample: *${prefix}toqr https://github.com/FantoX001*`
+            `Please provide an URL to convert into QR code!\n\nExample: *${prefix}toqr https://github.com/FantoX001*`,
           );
         }
 
+        await doReact("✅");
         const res = await getBuffer(
-          `https://www.qrtag.net/api/qr_8.png?url=${text}`
+          `https://www.qrtag.net/api/qr_8.png?url=${text}`,
         );
         await Atlas.sendMessage(
           m.from,
           { image: res, caption: `\n*Source:* ${text}` },
-          { quoted: m }
+          { quoted: m },
         );
         break;
 
@@ -320,4 +320,4 @@ export default {
         break;
     }
   },
-}; 
+};

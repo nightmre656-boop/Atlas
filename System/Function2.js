@@ -8,6 +8,7 @@ import { sizeFormatter } from "human-readable";
 import util from "util";
 import { Jimp } from "jimp";
 import child_process from "child_process";
+import ffmpegStatic from "ffmpeg-static";
 
 export const unixTimestampSeconds = (date = new Date()) =>
   Math.floor(date.getTime() / 1000);
@@ -228,19 +229,18 @@ export const parseMention = (text = "") => {
   );
 };
 
+const execAsync = util.promisify(child_process.exec);
+
 export const GIFBufferToVideoBuffer = async (image) => {
   const filename = `${Math.random().toString(36)}`;
-  await fs.promises.writeFile(`./System/Cache/${filename}.gif`, image);
-  child_process.exec(
-    `ffmpeg -i ./System/Cache/${filename}.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ./System/Cache/${filename}.mp4`
+  const gifPath = `./System/Cache/${filename}.gif`;
+  const mp4Path = `./System/Cache/${filename}.mp4`;
+  await fs.promises.writeFile(gifPath, image);
+  await execAsync(
+    `"${ffmpegStatic}" -i "${gifPath}" -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" "${mp4Path}"`
   );
-  await sleep(4000);
-
-  var buffer5 = await fs.readFileSync(`./System/Cache/${filename}.mp4`);
-  Promise.all([
-    unlink(`./System/Cache/${filename}.mp4`),
-    unlink(`./System/Cache/${filename}.gif`),
-  ]);
+  const buffer5 = await fs.promises.readFile(mp4Path);
+  await Promise.all([unlink(mp4Path), unlink(gifPath)]);
   return buffer5;
 };
 

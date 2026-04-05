@@ -2,6 +2,7 @@ import fs from "fs";
 import axios from "axios";
 import path from "path";
 import { pathToFileURL } from "url";
+import os from "os";
 let mergedCommands = [
   "help",
   "h",
@@ -10,20 +11,110 @@ let mergedCommands = [
   "support",
   "supportgc",
   "script",
+  "alive",
+  "uptime",
+  "runtime",
+  "ping",
+  "status",
+  "info",
+  "sys",
+  "restart",
+  "reboot",
 ];
 
 export default {
   name: "systemcommands",
   alias: [...mergedCommands],
-  uniquecommands: ["script", "support", "help"],
+  uniquecommands: ["script", "support", "help", "alive", "restart"],
   description: "All system commands",
   start: async (
     Atlas,
     m,
-    { pushName, prefix, inputCMD, doReact, text, args },
+    {
+      pushName,
+      prefix,
+      inputCMD,
+      doReact,
+      text,
+      args,
+      isCreator,
+      isintegrated,
+    },
   ) => {
     const pic = fs.readFileSync("./Assets/Atlas.jpg");
     switch (inputCMD) {
+      case "alive":
+      case "ping":
+      case "status":
+      case "info":
+      case "sys":
+      case "runtime":
+      case "uptime": {
+        await doReact("⚡");
+        try {
+          // safe() runs fn and returns null instead of throwing
+          const safe = (fn) => { try { return fn() ?? null; } catch { return null; } };
+
+          const botUptime = safe(() => {
+            const up = process.uptime();
+            return `${Math.floor(up/3600)}h ${Math.floor((up%3600)/60)}m ${Math.floor(up%60)}s`;
+          });
+          const sysUptime = safe(() => {
+            const up = os.uptime();
+            return `${Math.floor(up/3600)}h ${Math.floor((up%3600)/60)}m`;
+          });
+          const heap = safe(() => {
+            const m = process.memoryUsage();
+            return `${(m.heapUsed/1024/1024).toFixed(1)} / ${(m.heapTotal/1024/1024).toFixed(1)} MB`;
+          });
+          const rss    = safe(() => `${(process.memoryUsage().rss/1024/1024).toFixed(1)} MB`);
+          const ram    = safe(() => `${((os.totalmem()-os.freemem())/1024/1024/1024).toFixed(2)} / ${(os.totalmem()/1024/1024/1024).toFixed(2)} GB`);
+          const runtime = safe(() => process.versions.bun ? `Bun v${process.versions.bun}` : `Node.js ${process.version}`);
+          const platform = safe(() => `${os.platform()} (${process.arch})`);
+          const env = safe(() => {
+            if (process.env.DYNO) return "Heroku";
+            if (process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT) return "Railway";
+            if (process.env.RENDER) return "Render";
+            if (process.env.KOYEB_APP_NAME || process.env.KOYEB_REGION) return "Koyeb";
+            if (fs.existsSync("/.dockerenv")) return "Docker";
+            if (process.env.PM2_HOME !== undefined || process.env.pm_id !== undefined) return "pm2 (local)";
+            return "Local";
+          });
+          const cpu = safe(() => { const c = os.cpus(); return `${c.length}x ${c[0]?.model?.trim() || "Unknown"}`; });
+          const load = safe(() => { const l = os.loadavg(); return l[0] > 0 ? `${l[0].toFixed(2)} / ${l[1].toFixed(2)} / ${l[2].toFixed(2)}` : null; });
+          const pid  = safe(() => String(process.pid));
+          const ver  = safe(() => {
+            const v = global.botVersion;
+            if (!v) return null;
+            return global.updateAvailable ? `v${v} *(Update: v${global.latestVersion})*` : `v${v} ✓`;
+          });
+
+          // L() returns a formatted line or null — nulls are filtered out
+          const L = (icon, label, val) => val ? `${icon} *${label} :* ${val}` : null;
+
+          const uptimeLines = [L("🔋", "Bot Uptime", botUptime), L("🖥️", "System Uptime", sysUptime)].filter(Boolean);
+          const memLines    = [L("📦", "Heap", heap), L("🗃️", "RSS", rss), L("🧠", "System RAM", ram)].filter(Boolean);
+          const sysLines    = [L("⚙️", "Runtime", runtime), L("🌐", "Platform", platform), L("🏠", "Environment", env), L("🔢", "CPU", cpu), L("📊", "Load Avg", load), L("🆔", "PID", pid)].filter(Boolean);
+
+          const parts = [
+            `⚡ *Atlas — System Status*`,
+            ``,
+            `👤 *User :* ${pushName}`,
+            `🤖 *Bot Status :* Online ✅`,
+            ...(ver  ? [`🔖 *Version :* ${ver}`] : []),
+            ...(uptimeLines.length ? [``, `*━━━━━ 🕐 Uptime ━━━━━*`,  ...uptimeLines] : []),
+            ...(memLines.length    ? [``, `*━━━━━ 💾 Memory ━━━━━*`,  ...memLines]    : []),
+            ...(sysLines.length    ? [``, `*━━━━━ 🔧 System ━━━━━*`,  ...sysLines]    : []),
+          ];
+
+          await Atlas.sendMessage(m.from, { image: pic, caption: parts.join("\n") }, { quoted: m });
+        } catch (e) {
+          await doReact("❌");
+          m.reply(`Error: ${e.message}`);
+        }
+        break;
+      }
+
       case "script":
       case "sc":
         await doReact("🧣");
@@ -31,7 +122,6 @@ export default {
           "https://api.github.com/repos/FantoX/Atlas-MD",
         );
         let repo = repoInfo.data;
-        console.log(repo);
         let txt = `            🧣 *${botName}'s Script* 🧣\n\n*🎀 Total Forks:* ${
           repo.forks_count
         }\n*⭐ Total Stars:* ${repo.stargazers_count}\n*📜 License:* ${
@@ -40,7 +130,7 @@ export default {
           2,
         )} MB\n*📅 Last Updated:* ${repo.updated_at}\n\n*🔗 Repo Link:* ${
           repo.html_url
-        }\n\n❝ Dont forget to give a Star ⭐ to the repo. It's made with restless hardwork by *Team ATLAS*. ❞\n\n*©️ Team ATLAS- 2023*`;
+        }\n\n❝ Dont forget to give a Star ⭐ to the repo. It's made with restless hardwork by *Team ATLAS*. ❞\n\n*©️ Team ATLAS- ${new Date().getFullYear()}*`;
         Atlas.sendMessage(m.from, { image: pic, caption: txt }, { quoted: m });
         break;
 
@@ -103,7 +193,7 @@ export default {
 
         const allCommands = await readUniqueCommands(pluginsDir);
         const formattedCommands = formatCommands(allCommands);
-        var helpText = `\nKonnichiwa *${pushName}* Senpai,\n\nI am *${botName}*, a WhatsApp bot built to take your boring WhatsApp experience into next level.\n\n*🔖 My Prefix is:*  ${prefix}\n\n${formattedCommands}\n\n\n*©️ Team ATLAS- 2023*`;
+        var helpText = `\nKonnichiwa *${pushName}* Senpai,\n\nI am *${botName}*, a WhatsApp bot built to take your boring WhatsApp experience into next level.\n\n*🔖 My Prefix is:*  ${prefix}\n\n${formattedCommands}\n\n\n*©️ Team ATLAS- ${new Date().getFullYear()}*`;
         await Atlas.sendMessage(
           m.from,
           { video: { url: botVideo }, gifPlayback: true, caption: helpText },
@@ -111,6 +201,52 @@ export default {
         );
 
         break;
+
+      case "reboot":
+      case "restart": {
+        if (!isCreator && !isintegrated) {
+          await doReact("❌");
+          return Atlas.sendMessage(
+            m.from,
+            { text: `Only *Owners* can restart the bot !` },
+            { quoted: m },
+          );
+        }
+        await doReact("🔄");
+        await Atlas.sendMessage(
+          m.from,
+          {
+            text: `♻️ *Restarting bot...*\n\nBot will be back online shortly !`,
+          },
+          { quoted: m },
+        );
+
+        setTimeout(async () => {
+          const isPm2 =
+            process.env.PM2_HOME !== undefined ||
+            process.env.pm_id !== undefined;
+          if (isPm2) {
+            process.exit(0);
+          } else {
+            const { spawn } = await import("child_process");
+            const logPath = path.join(process.cwd(), "atlas.log");
+            const logFd = fs.openSync(logPath, "a");
+            const child = spawn(
+              process.execPath,
+              [...process.execArgv, ...process.argv.slice(1)],
+              {
+                detached: true,
+                stdio: ["ignore", logFd, logFd],
+                env: process.env,
+                cwd: process.cwd(),
+              },
+            );
+            child.unref();
+            process.exit(0);
+          }
+        }, 2000);
+        break;
+      }
 
       default:
         break;

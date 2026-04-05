@@ -1,5 +1,4 @@
 import fs from "fs";
-import { Jimp } from "jimp";
 import moment from "moment-timezone";
 import {
   setWelcome,
@@ -52,7 +51,6 @@ export default {
     "antilink",
     "welcome",
     "group",
-    "gc",
     "gcinfo",
     "tagall",
     "hidetag",
@@ -85,7 +83,7 @@ export default {
       isBotAdmin,
       groupAdmin,
       isAdmin,
-    }
+    },
   ) => {
     const messageSender = m.sender;
     const quotedsender = m.quoted ? m.quoted.sender : mentionByTag[0];
@@ -96,10 +94,15 @@ export default {
         if (!isMedia) {
           message = m.quoted ? m.quoted.msg : "『 *Attention Admins* 』";
         } else {
-          message = "『 *Attention Admins* 』\n\n*🎀 Message:* Check this Out !";
+          message =
+            "『 *Attention Admins* 』\n\n*🎀 Message:* Check this Out !";
         }
         await doReact("🏅");
-        Atlas.sendMessage(m.from, { text: message, mentions: groupAdmin }, { quoted: m });
+        Atlas.sendMessage(
+          m.from,
+          { text: message, mentions: groupAdmin },
+          { quoted: m },
+        );
         break;
       }
 
@@ -115,7 +118,7 @@ export default {
         if (!text) {
           await doReact("❔");
           return m.reply(
-            `Please provide a new group name !\n\nExample: *${prefix}setgcname Bot Testing*`
+            `Please provide a new group name !\n\nExample: *${prefix}setgcname Bot Testing*`,
           );
         }
         await doReact("🎐");
@@ -131,10 +134,10 @@ export default {
           await Atlas.sendMessage(
             m.from,
             {
-              image: { url: ppgc, mimetype: "image/jpeg" },
+              image: { url: ppgc },
               caption: `*『 Group Name Updated 』*\n\n_🔶 Old Name:_\n*${oldGCName}*\n\n_🔷 New Name:_\n*${text}*\n`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
           await m.reply(`Failed to update group name: ${err.message}`);
@@ -156,7 +159,7 @@ export default {
           if (!m.quoted.sender.includes(botNumber)) {
             await doReact("❌");
             return m.reply(
-              `Sorry, Without *Admin* permission, I can only delete my own messages !`
+              `Sorry, Without *Admin* permission, I can only delete my own messages !`,
             );
           }
           const key = { remoteJid: m.from, fromMe: true, id: m.quoted.id };
@@ -165,7 +168,9 @@ export default {
         } else {
           if (!isAdmin) {
             await doReact("❌");
-            return m.reply(`Sorry, only *Admins* can delete other's messages !`);
+            return m.reply(
+              `Sorry, only *Admins* can delete other's messages !`,
+            );
           }
           const key = {
             remoteJid: m.from,
@@ -208,7 +213,7 @@ export default {
               text: `@${mentionedUser.split("@")[0]} Senpai is not an *Admin* of this group!`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         await doReact("📉");
@@ -220,7 +225,7 @@ export default {
               text: `Sorry @${mentionedUser.split("@")[0]} Senpai, you have been *Demoted* by @${messageSender.split("@")[0]} !`,
               mentions: [mentionedUser, messageSender],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (error) {
           await doReact("❌");
@@ -230,7 +235,7 @@ export default {
               text: `An error occured while trying to demote @${mentionedUser.split("@")[0]} Senpai !\n\n*Error:* ${error}`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         break;
@@ -255,13 +260,17 @@ export default {
           await Atlas.sendMessage(
             m.from,
             {
-              image: { url: ppgc, mimetype: "image/jpeg" },
+              image: { url: ppgc },
               caption: `\n_🎀 Group Name:_ *${metadata.subject}*\n\n_🧩 Group Link:_\n${linkcode}\n`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
-          await Atlas.sendMessage(m.from, { text: `Failed to fetch group link: ${err.message}` }, { quoted: m });
+          await Atlas.sendMessage(
+            m.from,
+            { text: `Failed to fetch group link: ${err.message}` },
+            { quoted: m },
+          );
         }
         break;
       }
@@ -290,7 +299,7 @@ export default {
               image: { url: botImage2 },
               caption: `\n*「 Group Message Settings 」*\n\nSelect an option below.\n\n*_Usage:_*\n\n*${prefix}group open*\n*${prefix}group close*\n`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         break;
@@ -327,11 +336,11 @@ export default {
         await Atlas.sendMessage(
           m.from,
           {
-            image: { url: ppgc, mimetype: "image/jpeg" },
+            image: { url: ppgc },
             caption: txt,
             mentions: [metadata.owner],
           },
-          { quoted: m }
+          { quoted: m },
         );
         break;
       }
@@ -347,16 +356,17 @@ export default {
           message2 = m.quoted
             ? m.quoted.msg
             : args[0]
-            ? args.join(" ")
-            : "『 *Attention Everybody* 』";
+              ? args.join(" ")
+              : "『 *Attention Everybody* 』";
         } else {
-          message2 = "『 *Attention Everybody* 』\n\n*🎀 Message:* Check this Out !";
+          message2 =
+            "『 *Attention Everybody* 』\n\n*🎀 Message:* Check this Out !";
         }
         await doReact("🎌");
         Atlas.sendMessage(
           m.from,
           { text: message2, mentions: participants.map((a) => a.id) },
-          { quoted: m }
+          { quoted: m },
         );
         break;
       }
@@ -376,7 +386,11 @@ export default {
           });
           await Atlas.groupLeave(m.from);
         } catch (e) {
-          await Atlas.sendMessage(m.from, { text: `An error occurred !` }, { quoted: m });
+          await Atlas.sendMessage(
+            m.from,
+            { text: `An error occurred !` },
+            { quoted: m },
+          );
         }
         break;
       }
@@ -411,7 +425,7 @@ export default {
               text: `@${mentionedUser.split("@")[0]} Senpai is already an *Admin* of this group!`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         await doReact("💹");
@@ -423,7 +437,7 @@ export default {
               text: `Congratulations @${mentionedUser.split("@")[0]} Senpai 🥳, you have been *Promoted* by @${messageSender.split("@")[0]} !`,
               mentions: [mentionedUser, messageSender],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (error) {
           await Atlas.sendMessage(
@@ -432,7 +446,7 @@ export default {
               text: `An error occured while trying to promote @${mentionedUser.split("@")[0]} Senpai !\n\n*Error:* ${error}`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         break;
@@ -457,7 +471,11 @@ export default {
         }
         if (!text && !m.quoted) {
           await doReact("❔");
-          return Atlas.sendMessage(m.from, { text: `Please tag a user to *Remove* !` }, { quoted: m });
+          return Atlas.sendMessage(
+            m.from,
+            { text: `Please tag a user to *Remove* !` },
+            { quoted: m },
+          );
         }
         const mentionedUser = m.quoted ? m.quoted.sender : mentionByTag[0];
         const users = mentionedUser || m.msg.contextInfo.participant;
@@ -469,7 +487,7 @@ export default {
               text: `*Command Rejected !* @${mentionedUser.split("@")[0]} Senpai is an *Admin* of this group so you are not allowed to remove him !`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         try {
@@ -480,7 +498,7 @@ export default {
               text: `@${mentionedUser.split("@")[0]} has been *Removed* Successfully from *${metadata.subject}*`,
               mentions: [mentionedUser],
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
           await m.reply(`Failed to remove user: ${err.message}`);
@@ -504,18 +522,20 @@ export default {
             {
               text: `Send/reply Image With Caption ${prefix + "setgcpp"} to change the Profile Pic of this group.`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         }
         await doReact("🎴");
         const quotedimage = await Atlas.downloadAndSaveMediaMessage(quoted);
-        const { preview } = await generatePP(quotedimage);
-        await Atlas.query({
-          tag: "iq",
-          attrs: { to: m.from, type: "set", xmlns: "w:profile:picture" },
-          content: [{ tag: "picture", attrs: { type: "image" }, content: preview }],
-        });
-        fs.unlinkSync(quotedimage);
+        try {
+          await Atlas.updateProfilePicture(m.from, { url: quotedimage });
+        } catch (error) {
+          await m.reply(
+            `*Error:* Failed to update profile picture. Ensure the bot has proper admin permissions.`,
+          );
+        } finally {
+          fs.unlinkSync(quotedimage);
+        }
         let ppgc;
         try {
           ppgc = await Atlas.profilePictureUrl(m.from, "image");
@@ -529,7 +549,7 @@ export default {
             caption: `\nGroup Profile Picture has been updated Successfully by @${messageSender.split("@")[0]} !`,
             mentions: [messageSender],
           },
-          { quoted: m }
+          { quoted: m },
         );
         break;
       }
@@ -545,7 +565,11 @@ export default {
         }
         if (!text && !m.quoted) {
           await doReact("❔");
-          return Atlas.sendMessage(m.from, { text: `Please provide a new group description !` }, { quoted: m });
+          return Atlas.sendMessage(
+            m.from,
+            { text: `Please provide a new group description !` },
+            { quoted: m },
+          );
         }
         await doReact("📑");
         let ppgc;
@@ -560,10 +584,10 @@ export default {
           await Atlas.sendMessage(
             m.from,
             {
-              image: { url: ppgc, mimetype: "image/jpeg" },
+              image: { url: ppgc },
               caption: `*『 Group Description Changed 』*\n\n_🧩 New Description:_\n*${newGCdesc}*`,
             },
-            { quoted: m }
+            { quoted: m },
           );
         } catch (err) {
           await m.reply(`Failed to update description: ${err.message}`);
@@ -583,13 +607,17 @@ export default {
         if (m.from == "120363040838753957@g.us") {
           await doReact("❌");
           return m.reply(
-            "Sorry, this command is not allowed in *Atlas Support Group* !\n\nYou are not allowed to change support group link !"
+            "Sorry, this command is not allowed in *Atlas Support Group* !\n\nYou are not allowed to change support group link !",
           );
         }
         await doReact("💫");
         try {
           await Atlas.groupRevokeInvite(m.from);
-          await Atlas.sendMessage(m.from, { text: `Group link has been *Updated* Successfully!` }, { quoted: m });
+          await Atlas.sendMessage(
+            m.from,
+            { text: `Group link has been *Updated* Successfully!` },
+            { quoted: m },
+          );
         } catch (err) {
           await m.reply(`Failed to revoke link: ${err.message}`);
         }
@@ -606,7 +634,11 @@ export default {
           return m.reply(`*Bot* must be *Admin* in order to use this Command!`);
         }
         const message2 = !isMedia
-          ? m.quoted ? m.quoted.msg : args[0] ? args.join(" ") : "No message"
+          ? m.quoted
+            ? m.quoted.msg
+            : args[0]
+              ? args.join(" ")
+              : "No message"
           : "Check this Out !";
 
         let mess = `            『 *Attention Everybody* 』
@@ -623,7 +655,7 @@ export default {
         Atlas.sendMessage(
           m.from,
           { text: mess, mentions: participants.map((a) => a.id) },
-          { quoted: m }
+          { quoted: m },
         );
         break;
       }
@@ -635,7 +667,9 @@ export default {
         }
         if (!text) {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}chatbotgc on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}chatbotgc on`,
+          );
         }
         const chatbotGCStatus = await checkGroupChatbot(m.from);
         if (args[0] == "on") {
@@ -645,7 +679,9 @@ export default {
           }
           await doReact("🧩");
           await setGroupChatbot(m.from);
-          await m.reply(`*Group Chatbot* has been *Enabled* Successfully ! \n\nBot will not reply to messages where bot is mentioned!`);
+          await m.reply(
+            `*Group Chatbot* has been *Enabled* Successfully ! \n\nBot will not reply to messages where bot is mentioned!`,
+          );
         } else if (args[0] == "off") {
           if (!chatbotGCStatus) {
             await doReact("❌");
@@ -656,7 +692,9 @@ export default {
           await m.reply(`*Group Chatbot* has been *Disabled* Successfully !`);
         } else {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}chatbotgc on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}chatbotgc on`,
+          );
         }
         break;
       }
@@ -672,7 +710,9 @@ export default {
         }
         if (!text) {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}antilink on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}antilink on`,
+          );
         }
         const antilinkStatus = await checkAntilink(m.from);
         if (args[0] == "on") {
@@ -682,7 +722,9 @@ export default {
           }
           await doReact("⚜️");
           await setAntilink(m.from);
-          await m.reply(`*Antilink* has been *Enabled* Successfully ! \n\nBot will remove all links from messages!`);
+          await m.reply(
+            `*Antilink* has been *Enabled* Successfully ! \n\nBot will remove all links from messages!`,
+          );
         } else if (args[0] == "off") {
           if (!antilinkStatus) {
             await doReact("❌");
@@ -693,7 +735,9 @@ export default {
           await m.reply(`*Antilink* has been *Disabled* Successfully !`);
         } else {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}antilink on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}antilink on`,
+          );
         }
         break;
       }
@@ -709,7 +753,9 @@ export default {
         }
         if (!text) {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}welcome on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}welcome on`,
+          );
         }
         const welcomeStatus = await checkWelcome(m.from);
         if (args[0] == "on") {
@@ -719,7 +765,9 @@ export default {
           }
           await doReact("🎀");
           await setWelcome(m.from);
-          await m.reply(`*Welcome/Goodbye* messages are *Enabled* Successfully !`);
+          await m.reply(
+            `*Welcome/Goodbye* messages are *Enabled* Successfully !`,
+          );
         } else if (args[0] == "off") {
           if (!welcomeStatus) {
             await doReact("❌");
@@ -727,10 +775,14 @@ export default {
           }
           await doReact("🎀");
           await delWelcome(m.from);
-          await m.reply(`*Welcome/Goodbye* messages are *Disabled* Successfully !`);
+          await m.reply(
+            `*Welcome/Goodbye* messages are *Disabled* Successfully !`,
+          );
         } else {
           await doReact("❔");
-          return m.reply(`Please provide On / Off action !\n\n*Example:*\n\n${prefix}welcome on`);
+          return m.reply(
+            `Please provide On / Off action !\n\n*Example:*\n\n${prefix}welcome on`,
+          );
         }
         break;
       }
@@ -740,14 +792,3 @@ export default {
     }
   },
 };
-
-async function generatePP(buffer) {
-  const jimp = await Jimp.read(buffer);
-  const min = jimp.getWidth();
-  const max = jimp.getHeight();
-  const cropped = jimp.crop(0, 0, min, max);
-  return {
-    img: await cropped.scaleToFit({ w: 720, h: 720 }).getBuffer("image/jpeg"),
-    preview: await cropped.normalize().getBuffer("image/jpeg"),
-  };
-}

@@ -125,7 +125,7 @@ export default {
             });
 
             req.on("error", (error) => {
-              console.error("Error:", error);
+              console.error("[ EXCEPTION ] Execute Error:", error);
             });
 
             req.end();
@@ -181,7 +181,7 @@ export default {
             });
 
             req.on("error", (error) => {
-              console.error("Error:", error);
+              console.error("[ EXCEPTION ] Execute Error:", error);
             });
 
             req.end();

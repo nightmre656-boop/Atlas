@@ -12,3 +12,5 @@ readmes
 package-lock.json
 ExtraPlugins
 ExtraPlugins_
+atlas.log
+atlas.pid

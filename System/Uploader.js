@@ -18,6 +18,24 @@ async function GraphOrg(Path) {
   return "https://graph.org" + data.data[0].src;
 }
 
+async function CatboxUpload(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error("File not Found");
+  const form = new BodyForm();
+  form.append("reqtype", "fileupload");
+  form.append("userhash", "");
+  form.append("fileToUpload", fs.createReadStream(filePath));
+  const { data } = await axios({
+    url: "https://catbox.moe/user/api.php",
+    method: "POST",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      ...form.getHeaders(),
+    },
+    data: form,
+  });
+  return data; // returns the URL string directly e.g. https://files.catbox.moe/xxxxx.mp4
+}
+
 async function UploadFileUgu(input) {
   const form = new BodyForm();
   form.append("files[]", fs.createReadStream(input));
@@ -73,5 +91,5 @@ async function webp2mp4File(path) {
   return { status: true, message: "Created By MRHRTZ", result };
 }
 
-export { GraphOrg, UploadFileUgu, webp2mp4File };
-export default { GraphOrg, UploadFileUgu, webp2mp4File }; 
+export { GraphOrg, CatboxUpload, UploadFileUgu, webp2mp4File };
+export default { GraphOrg, CatboxUpload, UploadFileUgu, webp2mp4File }; 

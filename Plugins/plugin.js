@@ -20,10 +20,10 @@ export default {
     switch (inputCMD) {
       case "install": {
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
-            text: `Sorry, only *Owners* and *Mods* can use this command !`,
+            text: `Sorry, only *Bot Moderators* can use this command !`,
             quoted: m,
           });
         }
@@ -63,13 +63,12 @@ export default {
 
             const filePath = path.join(folderName, fileName);
             await fs.promises.writeFile(filePath, body);
-            console.log("Plugin saved successfully!");
             await m.reply(`Installing *${fileName}*... `);
             await readcommands();
             await pushPlugin(fileName, text);
             await m.reply(`*${fileName}* Installed Successfully !`);
           } catch (error) {
-            console.error("[ ATLAS ] Plugin install error:", error.message);
+            console.error("[ EXCEPTION ] Plugin install error:", error.message);
             await m.reply(`Failed to install plugin: ${error.message}`);
           }
         }
@@ -90,7 +89,7 @@ export default {
           for (let i = 0; i < plugins.length; i++) {
             txt += `🔖 *Plugin ${i + 1}*\n*🎀 Name:* ${plugins[i].plugin}\n*🧩 Url:* ${plugins[i].url}\n\n`;
           }
-          txt += `⚜️ To uninstall a plugin type *uninstall* plugin-name !\n\nExample: *${prefix}uninstall* audioEdit.js`;
+          txt += `⚜️ To uninstall a plugin type *uninstall* plugin-name or plugin-number !\n\nExample: *${prefix}uninstall* audioEdit.js\nor *${prefix}uninstall* 1`;
           await Atlas.sendMessage(m.from, { text: txt }, { quoted: m });
         }
         break;
@@ -98,20 +97,52 @@ export default {
 
       case "uninstall": {
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus && !isCreator && !isintegrated) {
+        if (!chechSenderModStatus) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
-            text: `Sorry, only *Owners* and *Mods* can use this command !`,
+            text: `Sorry, only *Bot Moderators* can use this command !`,
             quoted: m,
           });
         }
         if (!text) {
           return await m.reply(
-            `Please provide a plugin name !\n\nExample: *${prefix}uninstall* audioEdit.js`
+            `Please provide a plugin name or index number !\n\nExample:\n*${prefix}uninstall* audioEdit.js\nOr:\n*${prefix}uninstall* 1\nOr:\n*${prefix}uninstall* all`
           );
         }
         await doReact("🧩");
-        const fileName = text;
+        
+        let fileName = text.trim();
+
+        if (fileName.toLowerCase() === "all") {
+          const pluginsList = await getAllPlugins();
+          if (pluginsList.length === 0) {
+            await doReact("❌");
+            return await m.reply(`There are no additional plugins installed !`);
+          }
+          let deletedCount = 0;
+          for (const p of pluginsList) {
+            if (fs.existsSync(`./Plugins/${p.plugin}`)) {
+              fs.unlinkSync(`./Plugins/${p.plugin}`);
+            }
+            await delPlugin(p.plugin);
+            deletedCount++;
+          }
+          await readcommands();
+          return await m.reply(`Successfully uninstalled ${deletedCount} plugin(s) !\n\nPlease restart the bot to clear cache !`);
+        }
+
+        if (/^\d+$/.test(fileName)) {
+          const parsedIndex = parseInt(fileName) - 1;
+          const pluginsList = await getAllPlugins();
+          
+          if (parsedIndex >= 0 && parsedIndex < pluginsList.length) {
+            fileName = pluginsList[parsedIndex].plugin;
+          } else {
+            await doReact("❌");
+            return await m.reply(`Invalid plugin index ! Please provide a valid number from the *${prefix}plugins* list.`);
+          }
+        }
+
         const plugin = await isPluginPresent(fileName);
 
         if (!plugin) {

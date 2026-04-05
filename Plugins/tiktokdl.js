@@ -153,7 +153,7 @@ Example:
       await doReact("✅");
 
     } catch (err) {
-      console.error("[ ATLAS ] TikTok Error:", err);
+      console.error("[ EXCEPTION ] TikTok Error:", err);
       await doReact("❌");
       m.reply("Failed to fetch TikTok. CDN blocked or API down.");
     }

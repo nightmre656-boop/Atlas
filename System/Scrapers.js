@@ -31,7 +31,8 @@ async function pinterest(querry) {
 
 async function wallpaper(title, page = '1') {
   const { data } = await axios.get(
-    `https://www.besthdwallpaper.com/search?CurrentPage=${page}&q=${title}`
+    `https://www.besthdwallpaper.com/search?CurrentPage=${page}&q=${encodeURIComponent(title)}`,
+    { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" } }
   );
   const $ = cheerio.load(data);
   const fetchedresult = [];

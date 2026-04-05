@@ -7,7 +7,9 @@ export default async (Atlas, anu) => {
     let desc = metadata.desc;
     if (desc == undefined) desc = "No Description";
 
-    for (const num of participants) {
+    for (const numEntry of participants) {
+      // Baileys v7 returns participants as objects {id, lid} instead of plain strings
+      const num = typeof numEntry === "string" ? numEntry : numEntry.id;
       let ppuser;
       try {
         ppuser = await Atlas.profilePictureUrl(num, "image");
@@ -18,11 +20,7 @@ export default async (Atlas, anu) => {
       if (anu.action == "add") {
         const WELstatus = await checkWelcome(anu.id);
         const WAuserName = num;
-        console.log(
-          `\n+${WAuserName.split("@")[0]} Joined/Got Added in: ${
-            metadata.subject
-          }\n`
-        );
+
         const Atlastext = `
 Hello @${WAuserName.split("@")[0]} Senpai,
 
@@ -44,11 +42,7 @@ ${desc}
       } else if (anu.action == "remove") {
         const WELstatus = await checkWelcome(anu.id);
         const WAuserName = num;
-        console.log(
-          `\n+${WAuserName.split("@")[0]} Left/Got Removed from: ${
-            metadata.subject
-          }\n`
-        );
+
         const Atlastext = `
   @${WAuserName.split("@")[0]} Senpai left the group.
   `;
@@ -62,6 +56,6 @@ ${desc}
       }
     }
   } catch (err) {
-    console.log(err);
+    console.error("[ EXCEPTION ]", err);
   }
 };
