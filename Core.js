@@ -84,14 +84,21 @@ export default async (Atlas, m, commands, chatUpdate) => {
     //   3. Atlas.user.id (if sender is the bot itself)
     let resolvedSender = m.sender;
     if (m.sender.endsWith("@lid")) {
-      if (m.key?.participantAlt?.endsWith("@s.whatsapp.net")) {
+      // 1. Check cached LID→phone mapping first
+      const cached = global.lidToJidMap?.get(sanitize(m.sender));
+      if (cached && cached.endsWith("@s.whatsapp.net")) {
+        resolvedSender = cached;
+      } else if (m.key?.participantAlt?.endsWith("@s.whatsapp.net")) {
+        // 2. Baileys v7 participantAlt field
         resolvedSender = sanitize(m.key.participantAlt);
       } else if (m.isGroup) {
+        // 3. Group metadata phone number
         const pMatch = participants.find(
           (p) => sanitize(p.id) === sanitize(m.sender) && p.phoneNumber
         );
         if (pMatch) resolvedSender = sanitize(pMatch.phoneNumber);
       }
+      // 4. Bot self-check
       if (resolvedSender === m.sender && sanitize(m.sender) === botLid) {
         resolvedSender = botIdClean;
       }

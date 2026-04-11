@@ -53,61 +53,120 @@ export default {
         await doReact("⚡");
         try {
           // safe() runs fn and returns null instead of throwing
-          const safe = (fn) => { try { return fn() ?? null; } catch { return null; } };
+          const safe = (fn) => {
+            try {
+              return fn() ?? null;
+            } catch {
+              return null;
+            }
+          };
 
           const botUptime = safe(() => {
             const up = process.uptime();
-            return `${Math.floor(up/3600)}h ${Math.floor((up%3600)/60)}m ${Math.floor(up%60)}s`;
+            return `${Math.floor(up / 3600)}h ${Math.floor((up % 3600) / 60)}m ${Math.floor(up % 60)}s`;
           });
           const sysUptime = safe(() => {
             const up = os.uptime();
-            return `${Math.floor(up/3600)}h ${Math.floor((up%3600)/60)}m`;
+            return `${Math.floor(up / 3600)}h ${Math.floor((up % 3600) / 60)}m`;
           });
           const heap = safe(() => {
             const m = process.memoryUsage();
-            return `${(m.heapUsed/1024/1024).toFixed(1)} / ${(m.heapTotal/1024/1024).toFixed(1)} MB`;
+            return `${(m.heapUsed / 1024 / 1024).toFixed(1)} / ${(m.heapTotal / 1024 / 1024).toFixed(1)} MB`;
           });
-          const rss    = safe(() => `${(process.memoryUsage().rss/1024/1024).toFixed(1)} MB`);
-          const ram    = safe(() => `${((os.totalmem()-os.freemem())/1024/1024/1024).toFixed(2)} / ${(os.totalmem()/1024/1024/1024).toFixed(2)} GB`);
-          const runtime = safe(() => process.versions.bun ? `Bun v${process.versions.bun}` : `Node.js ${process.version}`);
+          const rss = safe(
+            () => `${(process.memoryUsage().rss / 1024 / 1024).toFixed(1)} MB`,
+          );
+          const ram = safe(
+            () =>
+              `${((os.totalmem() - os.freemem()) / 1024 / 1024 / 1024).toFixed(2)} / ${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB`,
+          );
+          const runtime = safe(() =>
+            process.versions.bun
+              ? `Bun v${process.versions.bun}`
+              : `Node.js ${process.version}`,
+          );
           const platform = safe(() => `${os.platform()} (${process.arch})`);
           const env = safe(() => {
             if (process.env.DYNO) return "Heroku";
-            if (process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT) return "Railway";
+            if (
+              process.env.RAILWAY_PROJECT_ID ||
+              process.env.RAILWAY_ENVIRONMENT
+            )
+              return "Railway";
             if (process.env.RENDER) return "Render";
-            if (process.env.KOYEB_APP_NAME || process.env.KOYEB_REGION) return "Koyeb";
+            if (process.env.KOYEB_APP_NAME || process.env.KOYEB_REGION)
+              return "Koyeb";
             if (fs.existsSync("/.dockerenv")) return "Docker";
-            if (process.env.PM2_HOME !== undefined || process.env.pm_id !== undefined) return "pm2 (local)";
+            if (
+              process.env.PM2_HOME !== undefined ||
+              process.env.pm_id !== undefined
+            )
+              return "pm2 (local)";
             return "Local";
           });
-          const cpu = safe(() => { const c = os.cpus(); return `${c.length}x ${c[0]?.model?.trim() || "Unknown"}`; });
-          const load = safe(() => { const l = os.loadavg(); return l[0] > 0 ? `${l[0].toFixed(2)} / ${l[1].toFixed(2)} / ${l[2].toFixed(2)}` : null; });
-          const pid  = safe(() => String(process.pid));
-          const ver  = safe(() => {
+          const cpu = safe(() => {
+            const c = os.cpus();
+            return `${c.length}x ${c[0]?.model?.trim() || "Unknown"}`;
+          });
+          const load = safe(() => {
+            const l = os.loadavg();
+            return l[0] > 0
+              ? `${l[0].toFixed(2)} / ${l[1].toFixed(2)} / ${l[2].toFixed(2)}`
+              : null;
+          });
+          const pid = safe(() => String(process.pid));
+          const ver = safe(() => {
             const v = global.botVersion;
             if (!v) return null;
-            return global.updateAvailable ? `v${v} *(Update: v${global.latestVersion})*` : `v${v} ✓`;
+            return global.updateAvailable
+              ? `v${v} *(Update: v${global.latestVersion})*`
+              : `v${v} ✓`;
           });
 
           // L() returns a formatted line or null — nulls are filtered out
-          const L = (icon, label, val) => val ? `${icon} *${label} :* ${val}` : null;
+          const L = (icon, label, val) =>
+            val ? `${icon} *${label} :* ${val}` : null;
 
-          const uptimeLines = [L("🔋", "Bot Uptime", botUptime), L("🖥️", "System Uptime", sysUptime)].filter(Boolean);
-          const memLines    = [L("📦", "Heap", heap), L("🗃️", "RSS", rss), L("🧠", "System RAM", ram)].filter(Boolean);
-          const sysLines    = [L("⚙️", "Runtime", runtime), L("🌐", "Platform", platform), L("🏠", "Environment", env), L("🔢", "CPU", cpu), L("📊", "Load Avg", load), L("🆔", "PID", pid)].filter(Boolean);
+          const uptimeLines = [
+            L("🔋", "Bot Uptime", botUptime),
+            L("🖥️", "System Uptime", sysUptime),
+          ].filter(Boolean);
+          const memLines = [
+            L("📦", "Heap", heap),
+            L("🗃️", "RSS", rss),
+            L("🧠", "System RAM", ram),
+          ].filter(Boolean);
+          const sysLines = [
+            L("⚙️", "Runtime", runtime),
+            L("🌐", "Platform", platform),
+            L("🏠", "Environment", env),
+            L("🔢", "CPU", cpu),
+            L("📊", "Load Avg", load),
+            L("🆔", "PID", pid),
+          ].filter(Boolean);
 
           const parts = [
             `⚡ *Atlas — System Status*`,
             ``,
             `👤 *User :* ${pushName}`,
             `🤖 *Bot Status :* Online ✅`,
-            ...(ver  ? [`🔖 *Version :* ${ver}`] : []),
-            ...(uptimeLines.length ? [``, `*━━━━━ 🕐 Uptime ━━━━━*`,  ...uptimeLines] : []),
-            ...(memLines.length    ? [``, `*━━━━━ 💾 Memory ━━━━━*`,  ...memLines]    : []),
-            ...(sysLines.length    ? [``, `*━━━━━ 🔧 System ━━━━━*`,  ...sysLines]    : []),
+            ...(ver ? [`🔖 *Version :* ${ver}`] : []),
+            ...(uptimeLines.length
+              ? [``, `*━━━━━ 🕐 Uptime ━━━━━*`, ...uptimeLines]
+              : []),
+            ...(memLines.length
+              ? [``, `*━━━━━ 💾 Memory ━━━━━*`, ...memLines]
+              : []),
+            ...(sysLines.length
+              ? [``, `*━━━━━ 🔧 System ━━━━━*`, ...sysLines]
+              : []),
           ];
 
-          await Atlas.sendMessage(m.from, { image: pic, caption: parts.join("\n") }, { quoted: m });
+          await Atlas.sendMessage(
+            m.from,
+            { image: pic, caption: parts.join("\n") },
+            { quoted: m },
+          );
         } catch (e) {
           await doReact("❌");
           m.reply(`Error: ${e.message}`);
@@ -172,28 +231,77 @@ export default {
           return allCommands;
         }
 
+        const categoryIcons = {
+          core: { icon: "🎐", label: "ᴄᴏʀᴇ" },
+          moderator: { icon: "🛡️", label: "ᴍᴏᴅᴇʀᴀᴛᴏʀ" },
+          group: { icon: "🏮", label: "ɢʀᴏᴜᴘ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ" },
+          search: { icon: "🔍", label: "ꜱᴇᴀʀᴄʜ" },
+          pictures: { icon: "🖼️", label: "ᴘɪᴄᴛᴜʀᴇꜱ" },
+          sticker: { icon: "🎨", label: "ꜱᴛɪᴄᴋᴇʀ" },
+          reactions: { icon: "🎭", label: "ʀᴇᴀᴄᴛɪᴏɴꜱ" },
+          downloader: { icon: "📥", label: "ᴅᴏᴡɴʟᴏᴀᴅᴇʀ" },
+          "youtube-dl": { icon: "🎬", label: "ʏᴏᴜᴛᴜʙᴇ ᴅʟ" },
+          tiktokdl: { icon: "🎵", label: "ᴛɪᴋᴛᴏᴋ ᴅʟ" },
+          converter: { icon: "🔄", label: "ᴄᴏɴᴠᴇʀᴛᴇʀ" },
+          fun: { icon: "🎮", label: "ꜰᴜɴ & ᴍᴇᴅɪᴀ" },
+          others: { icon: "✨", label: "ᴏᴛʜᴇʀꜱ" },
+          plugin: { icon: "🔌", label: "ᴘʟᴜɢɪɴ" },
+          "code-runner": { icon: "💻", label: "ᴄᴏᴅᴇ ʀᴜɴɴᴇʀ" },
+        };
+
         function formatCommands(allCommands) {
           let formatted = "";
-
           for (const [file, ...commands] of allCommands) {
-            const capitalizedFile =
-              file.replace(".js", "").charAt(0).toUpperCase() +
-              file.replace(".js", "").slice(1);
-
-            formatted += `╟   🏮 *${capitalizedFile}* 🏮   ╢\n\n`;
-            formatted += `\`\`\`${commands
-              .map((cmd) => `⥼   ${prefix + cmd}`)
-              .join("\n")}\`\`\`\n\n\n`;
+            const name = file.replace(".js", "");
+            const meta = categoryIcons[name] || {
+              icon: "📌",
+              label: name.toUpperCase(),
+            };
+            const rows = [];
+            for (let i = 0; i < commands.length; i += 3) {
+              const chunk = commands
+                .slice(i, i + 3)
+                .map((c) => `${prefix}${c}`)
+                .join(", ");
+              rows.push(`    ❯  ${chunk}`);
+            }
+            const cmdLines = rows.join("\n");
+            formatted += `╭─❖ *${meta.label}* ❖\n${cmdLines}\n╰──────────────────\n\n`;
           }
-
           return formatted.trim();
         }
 
-        const pluginsDir = path.join(process.cwd(), "Plugins");
+        // Uptime calculation
+        const upSec = Math.floor(process.uptime());
+        const upH = Math.floor(upSec / 3600);
+        const upM = Math.floor((upSec % 3600) / 60);
+        const upS = upSec % 60;
+        const uptimeStr = `${upH}h ${upM}m ${upS}s`;
 
+        const pluginsDir = path.join(process.cwd(), "Plugins");
         const allCommands = await readUniqueCommands(pluginsDir);
+        const totalCmds = allCommands.reduce(
+          (acc, arr) => acc + arr.length - 1,
+          0,
+        );
         const formattedCommands = formatCommands(allCommands);
-        var helpText = `\nKonnichiwa *${pushName}* Senpai,\n\nI am *${botName}*, a WhatsApp bot built to take your boring WhatsApp experience into next level.\n\n*🔖 My Prefix is:*  ${prefix}\n\n${formattedCommands}\n\n\n*©️ Team ATLAS- ${new Date().getFullYear()}*`;
+
+        var helpText = [
+          `ᴋᴏɴɴɪᴄʜɪᴡᴀ *${pushName}* ꜱᴇɴᴘᴀɪ 👋`,
+          `ɪ ᴀᴍ *${botName}*, ᴀ ᴡʜᴀᴛꜱᴀᴘᴘ ʙᴏᴛ`,
+          `ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ *ᴛᴇᴀᴍ ᴀᴛʟᴀꜱ* 🌸`,
+          ``,
+          `🎀 *ᴘʀᴇꜰɪx* : \`${prefix}\``,
+          `📦 *ᴄᴏᴍᴍᴀɴᴅꜱ* : *${totalCmds}* ᴀᴠᴀɪʟᴀʙʟᴇ`,
+          `🕐 *ᴜᴘᴛɪᴍᴇ* : ${uptimeStr}`,
+          ``,
+          formattedCommands,
+          ``,
+          `*ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ:* \`${prefix}support\``,
+          ``,
+          `ᴘᴏᴡᴇʀᴇᴅ ʙʏ: © *ᴛᴇᴀᴍ ᴀᴛʟᴀꜱ*`,
+        ].join("\n");
+
         await Atlas.sendMessage(
           m.from,
           { video: { url: botVideo }, gifPlayback: true, caption: helpText },

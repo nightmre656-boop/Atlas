@@ -16,11 +16,24 @@ export default {
   alias: [...mergedCommands],
   uniquecommands: ["install", "uninstall", "plugins", "pluginlist"],
   description: "Install, Uninstall, List plugins",
-  start: async (Atlas, m, { text, args, pushName, prefix, inputCMD, isCreator, isintegrated, doReact }) => {
+  start: async (
+    Atlas,
+    m,
+    {
+      text,
+      args,
+      pushName,
+      prefix,
+      inputCMD,
+      isCreator,
+      isintegrated,
+      doReact,
+    },
+  ) => {
     switch (inputCMD) {
       case "install": {
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Bot Moderators* can use this command !`,
@@ -34,7 +47,7 @@ export default {
           return await Atlas.sendMessage(
             m.from,
             { text: `Invalid URL !` },
-            { quoted: m }
+            { quoted: m },
           );
         }
 
@@ -58,7 +71,9 @@ export default {
             }
 
             if (fs.existsSync(`./Plugins/${fileName}`)) {
-              return m.reply(`*${fileName}* plugin is already Present Locally !`);
+              return m.reply(
+                `*${fileName}* plugin is already Present Locally !`,
+              );
             }
 
             const filePath = path.join(folderName, fileName);
@@ -82,7 +97,7 @@ export default {
           await Atlas.sendMessage(
             m.from,
             { text: `No additional plugins installed !` },
-            { quoted: m }
+            { quoted: m },
           );
         } else {
           let txt = "*『    Installed Plugins List    』*\n\n";
@@ -97,7 +112,7 @@ export default {
 
       case "uninstall": {
         const chechSenderModStatus = await checkMod(m.sender);
-        if (!chechSenderModStatus) {
+        if (!chechSenderModStatus && !isCreator && !isintegrated()) {
           await doReact("❌");
           return Atlas.sendMessage(m.from, {
             text: `Sorry, only *Bot Moderators* can use this command !`,
@@ -106,11 +121,11 @@ export default {
         }
         if (!text) {
           return await m.reply(
-            `Please provide a plugin name or index number !\n\nExample:\n*${prefix}uninstall* audioEdit.js\nOr:\n*${prefix}uninstall* 1\nOr:\n*${prefix}uninstall* all`
+            `Please provide a plugin name or index number !\n\nExample:\n*${prefix}uninstall* audioEdit.js\nOr:\n*${prefix}uninstall* 1\nOr:\n*${prefix}uninstall* all`,
           );
         }
         await doReact("🧩");
-        
+
         let fileName = text.trim();
 
         if (fileName.toLowerCase() === "all") {
@@ -128,18 +143,22 @@ export default {
             deletedCount++;
           }
           await readcommands();
-          return await m.reply(`Successfully uninstalled ${deletedCount} plugin(s) !\n\nPlease restart the bot to clear cache !`);
+          return await m.reply(
+            `Successfully uninstalled ${deletedCount} plugin(s) !\n\nPlease restart the bot to clear cache !`,
+          );
         }
 
         if (/^\d+$/.test(fileName)) {
           const parsedIndex = parseInt(fileName) - 1;
           const pluginsList = await getAllPlugins();
-          
+
           if (parsedIndex >= 0 && parsedIndex < pluginsList.length) {
             fileName = pluginsList[parsedIndex].plugin;
           } else {
             await doReact("❌");
-            return await m.reply(`Invalid plugin index ! Please provide a valid number from the *${prefix}plugins* list.`);
+            return await m.reply(
+              `Invalid plugin index ! Please provide a valid number from the *${prefix}plugins* list.`,
+            );
           }
         }
 
@@ -155,7 +174,7 @@ export default {
           await delPlugin(fileName);
           await readcommands();
           await m.reply(
-            `*${fileName}* plugin uninstalled successfully !\n\nPlease restart the bot to clear cache !`
+            `*${fileName}* plugin uninstalled successfully !\n\nPlease restart the bot to clear cache !`,
           );
         } else {
           await doReact("❌");
@@ -177,7 +196,11 @@ export default {
 *🎀 Name:* nsfw-image.js\n🔖 *Number of commands:* 1\n*🧩 Url:* https://gist.githubusercontent.com/FantoX001/804c106f1f2fb1ae46e9bd63f854069d/raw/a93191b83c0cca44abb7e0e26b55caf2892f0bb4/nsfw-image.js\n\n
 
 ⚜️ To install a plugin type *install* _plugin-url_ !\n\nExample: *${prefix}install* https://gist.githubusercontent.com/FantoX001/xyz...\n\n⚜️ To uninstall a plugin type *uninstall* _plugin-name_ !\n\nExample: *${prefix}uninstall* audioEdit.js\n`;
-        await Atlas.sendMessage(m.from, { image: { url: botImage1 }, caption: textssf }, { quoted: m });
+        await Atlas.sendMessage(
+          m.from,
+          { image: { url: botImage1 }, caption: textssf },
+          { quoted: m },
+        );
         break;
       }
 
