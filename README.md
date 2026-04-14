@@ -74,14 +74,12 @@
 
 <p align="center">
 
-| Platform         | Deploy                                                                                                                                                                                                                                                                                                                                                  | Tutorial                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| **Repl.it**      | [![Deploy on Repl.it](https://i.ibb.co/zrB5kMh/deploy-on-repl.jpg)](https://repl.it/github/FantoX/Atlas-MD)                                                                                                                                                                                                                                             | [▶ Watch](https://youtu.be/R-_DU73UH8Q) |
-| **Railway**      | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/Gts2Zx?referralCode=f3gg2m)                                                                                                                                                                                                                                     | [▶ Watch](https://youtu.be/Qs6ryWnEtu8) |
-| **Koyeb**        | [![Deploy on Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/apps/deploy?type=docker&image=quay.io/FantoX/Atlas-MD:main&env[PORT]=8000&env[PREFIX]=-&&env[MONGODB]=mongodb+srv://...&&env[SESSION_ID]=yourSession&&env[MODS]=918101187835&&env[TENOR_API_KEY]=AIzaSyCyouca1_KKy4W_MG1xsPzuku5oa8W358c&&name=atlas) | [▶ Watch](https://youtu.be/OvNnpK1Gx6Y) |
-| **Heroku**       | [![Deploy on Heroku](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/FantoX/Atlas-MD)                                                                                                                                                                                                               | —                                       |
-| **Mogenius**     | [![Mogenius](https://www.cloudflare.com/static/90073b1e5bd8a0765640a20febb3dc22/mogenius_logo_quer.png)](https://studio.mogenius.com/)                                                                                                                                                                                                                  | —                                       |
-| **BoxMineWorld** | [![BoxMineWorld](https://graph.org/file/2af0e67f320986702ea24.jpg)](https://dash.boxmineworld.com/)                                                                                                                                                                                                                                                     | —                                       |
+| Platform    | Deploy                                                                                                                                                                                                                                                                                                                                                                                       | Tutorial                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Repl.it** | <a href="https://repl.it/github/FantoX/Atlas-MD"><img src="https://i.ibb.co/zrB5kMh/deploy-on-repl.jpg" alt="Deploy on Repl.it" height="32"></a>                                                                                                                                                                                                                                             | [▶ Watch](https://youtu.be/R-_DU73UH8Q) |
+| **Railway** | <a href="https://railway.app/new/template/Gts2Zx?referralCode=f3gg2m"><img src="https://railway.app/button.svg" alt="Deploy on Railway" height="32"></a>                                                                                                                                                                                                                                     | [▶ Watch](https://youtu.be/Qs6ryWnEtu8) |
+| **Koyeb**   | <a href="https://app.koyeb.com/apps/deploy?type=docker&image=quay.io/FantoX/Atlas-MD:main&env[PORT]=8000&env[PREFIX]=-&&env[MONGODB]=mongodb+srv://...&&env[SESSION_ID]=yourSession&&env[MODS]=918101187835&&env[TENOR_API_KEY]=AIzaSyCyouca1_KKy4W_MG1xsPzuku5oa8W358c&&name=atlas"><img src="https://www.koyeb.com/static/images/deploy/button.svg" alt="Deploy on Koyeb" height="32"></a> | [▶ Watch](https://youtu.be/OvNnpK1Gx6Y) |
+| **Heroku**  | <a href="https://heroku.com/deploy?template=https://github.com/FantoX/Atlas-MD"><img src="https://www.herokucdn.com/deploy/button.png" alt="Deploy on Heroku" height="32"></a>                                                                                                                                                                                                               | —                                       |
 
 </p>
 
@@ -95,7 +93,7 @@
 | Variable              | Description                                                                                   | Required    |
 | --------------------- | --------------------------------------------------------------------------------------------- | ----------- |
 | `PREFIX`              | Command prefix (e.g. `-`, `.`, `!`)                                                           | ✅          |
-| `MODS`                | Owner phone numbers without `+` or spaces, comma-separated (e.g. `918101187876,9198XXXXXXXX`) | ✅          |
+| `MODS`                | Owner phone numbers without `+` or spaces, comma-separated (e.g. `9181011xxxxx,9198XXXXXXXX`) | ✅          |
 | `MONGODB`             | Your MongoDB connection URL                                                                   | ✅          |
 | `SESSION_ID`          | Any random string — acts as the bot session key                                               | ✅          |
 | `TENOR_API_KEY`       | Tenor API key(s) for GIF commands, comma-separated                                            | ✅ for GIFs |
@@ -127,8 +125,9 @@ npm install
 cp .env.example .env
 # → Edit .env with your values
 
-# 4. Start the bot
-npm start
+# 4. Start the bot using PM2
+npm install -g pm2
+pm2 start ecosystem.config.cjs
 ```
 
 Scan the QR that appears in your browser via **WhatsApp → Linked Devices → Link a device**.
@@ -137,7 +136,7 @@ Scan the QR that appears in your browser via **WhatsApp → Linked Devices → L
 
 ---
 
-## 🐧 Android (UserLand) Installation
+## 🐧 Android (UserLand) Installation ( Ubultu / Debian / Kali OS )
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -146,203 +145,31 @@ sudo apt install -y bash git nodejs npm ffmpeg libwebp-dev imagemagick wget curl
 git clone https://github.com/FantoX/Atlas-MD
 cd Atlas-MD
 npm install
-npm start
+npm install -g pm2
+
+cp .env.example .env
+# → Edit .env with your values
+
+pm2 start ecosystem.config.cjs
 ```
 
-**Stop bot:** `Ctrl + C` &nbsp;|&nbsp; **Restart:** `npm start` &nbsp;|&nbsp; **Update session:** edit `SESSION_ID` in `.env`, then `git pull && npm start`
+**Stop bot:** `pm2 kill` &nbsp;|&nbsp; **Restart:** `pm2 restart Atlas` &nbsp;|&nbsp; **Update session:** edit `SESSION_ID` in `.env`, then `git pull && pm2 restart Atlas`
 
 ---
 
-## 📋 Complete Command Reference
+## ✨ Feature Highlights
 
-### 🤖 System Commands
+**Atlas MD** comes packed with a robust set of features to power your groups and DMs. Instead of a massive list of commands, here are the top capabilities you get out-of-the-box:
 
-| Command    | Aliases                                           | Description                                           |
-| ---------- | ------------------------------------------------- | ----------------------------------------------------- |
-| `-help`    | `-h`, `-menu`                                     | Dynamic help menu listing all commands                |
-| `-alive`   | `-ping`, `-status`, `-uptime`, `-sys`, `-runtime` | System status: RAM, CPU, uptime, environment, version |
-| `-script`  | `-sc`                                             | GitHub repo stats (forks, stars, license, size)       |
-| `-support` | `-supportgc`                                      | Get the support group link                            |
-| `-restart` | `-reboot`                                         | Restart the bot _(Owner only)_                        |
+- 🤖 **Advanced AI Integrations**: Seamlessly chat with Gemini, ChatGPT, and Claude. Built-in multi-key pools ensure you don't hit rate limits, and the AI can remember context for conversational interactions.
+- 🛠️ **Group Moderation & Management**: Take full control of your groups. Features include silent bans (users are ignored by the bot), anti-link protection, customizable welcome/goodbye messages, tagging all members, and managing admin roles fluidly.
+- 📥 **Universal Downloader**: Simply send a link from TikTok, Instagram, YouTube, X (Twitter), Pinterest, Spotify, Facebook, or SoundCloud, and the bot will instantly recognize and download the media or audio for you.
+- 🖼️ **Media & Sticker Toolkit**: Create static, animated, or meme stickers directly from images and videos. Convert media between formats (MP4 to MP3, Image to PDF, Sticker to Video) with ease. Includes built-in Google Emoji Kitchen mixing!
+- 🧩 **Live Plugin Architecture**: Expand the bot's functionality without ever shutting it down. Use `-install` to add new commands directly from GitHub gists or URLs on the fly.
+- 🔍 **Search & Utilities**: Built-in Google searches, YouTube scraping, lyrics fetcher, HD wallpapers, Pinterest images, GitHub profiling, and real-time weather information.
+- 🎭 **Anime Reactions & Characters**: Pick from 20 different anime bot personalities (like Power, Makima, Zero Two) and express yourself with dozens of high-quality animated reaction GIFs (bite, hug, slap, etc.).
 
----
-
-### 🛡️ Moderator / Owner Commands
-
-| Command       | Aliases                         | Description                                          |
-| ------------- | ------------------------------- | ---------------------------------------------------- |
-| `-addmod`     | `-setmod`                       | Add a moderator (tag or reply to user)               |
-| `-delmod`     | `-removemod`                    | Remove a moderator                                   |
-| `-mods`       | `-modlist`, `-owner`, `-owners` | List all owners and added mods                       |
-| `-ban`        | `-banuser`                      | Ban a user — bot silently ignores all their messages |
-| `-unban`      | `-unbanuser`                    | Unban a user                                         |
-| `-banlist`    | `-listbans`                     | List all banned users and groups (with group names)  |
-| `-bangroup`   | `-bangc`                        | Ban a group — bot goes completely silent in it       |
-| `-unbangroup` | `-unbangc`                      | Unban a group                                        |
-| `-mode`       | `-setbotmode`                   | Set bot mode: `self` / `private` / `public`          |
-| `-setchar`    | —                               | Switch bot character by ID (0–19)                    |
-| `-charlist`   | `-characters`                   | View all 20 available bot characters                 |
-| `-pmchatbot`  | `-dmchatbot`                    | Toggle private/DM chatbot `on` / `off`               |
-| `-getcmd`     | `-getplugin`, `-cmdfile`        | Get the plugin file that handles a given command     |
-
----
-
-### 👥 Group Management Commands
-
-| Command      | Aliases      | Description                                      |
-| ------------ | ------------ | ------------------------------------------------ |
-| `-admins`    | `-admin`     | Tag all group admins                             |
-| `-tagall`    | —            | Tag all group members with a message             |
-| `-hidetag`   | `-htag`      | Tag all members silently (invisible ping)        |
-| `-promote`   | —            | Promote a member to admin                        |
-| `-demote`    | —            | Demote an admin to member                        |
-| `-remove`    | —            | Remove a member from the group                   |
-| `-setgcname` | —            | Change the group name                            |
-| `-setgcdesc` | —            | Change the group description                     |
-| `-setppgc`   | —            | Change the group profile picture                 |
-| `-gcinfo`    | `-groupinfo` | Show group info (members, admins, creation date) |
-| `-gclink`    | `-grouplink` | Get the group invite link                        |
-| `-revoke`    | —            | Reset / revoke the group invite link             |
-| `-group`     | `-gc`        | Open (`open`) or close (`close`) group messaging |
-| `-welcome`   | —            | Toggle welcome/goodbye messages `on` / `off`     |
-| `-antilink`  | —            | Toggle anti-link protection `on` / `off`         |
-| `-chatbotgc` | —            | Toggle group AI chatbot `on` / `off`             |
-| `-delete`    | `-del`       | Delete a quoted message                          |
-| `-leave`     | —            | Make the bot leave the group                     |
-
----
-
-### 🔍 Search Commands
-
-| Command          | Aliases          | Description                                                  |
-| ---------------- | ---------------- | ------------------------------------------------------------ |
-| `-google`        | `-search`        | Google search — returns 10 results with links & descriptions |
-| `-lyrics`        | —                | Search and fetch song lyrics                                 |
-| `-yts`           | `-youtubesearch` | YouTube video search results                                 |
-| `-weather`       | —                | Weather report for any city                                  |
-| `-github`        | `-gh`            | GitHub user profile info                                     |
-| `-wiki`          | `-wikipedia`     | Wikipedia article summary (up to 800 chars)                  |
-| `-wallpaper`     | `-wall`          | Search HD wallpapers                                         |
-| `-ringtone`      | —                | Search and send a ringtone audio                             |
-| `-stickersearch` | `-getsticker`    | Search Tenor GIFs and send as animated sticker               |
-
----
-
-### 🖼️ Picture / Image Commands
-
-| Command     | Aliases                           | Description                              |
-| ----------- | --------------------------------- | ---------------------------------------- |
-| `-image`    | `-gimage`, `-googleimage`, `-gig` | Bing image search                        |
-| `-gif`      | `-gifsearch`                      | Tenor GIF search (sends as video GIF)    |
-| `-pin`      | `-pinterest`                      | Pinterest image search                   |
-| `-couplepp` | `-ppcouple`                       | Get a random couple profile picture pair |
-
----
-
-### 🎬 YouTube Commands
-
-| Command     | Aliases            | Description                                  |
-| ----------- | ------------------ | -------------------------------------------- |
-| `-play`     | `-song`, `-yt`     | Search YouTube by name and download as audio |
-| `-mp3`      | `-ytmp3`           | Download YouTube audio by link               |
-| `-mp4`      | `-ytmp4`, `-video` | Download YouTube video by name or link       |
-| `-ytsearch` | `-yts`             | YouTube search results with thumbnails       |
-
----
-
-### 📥 Universal Downloader
-
-**Command:** `-dl <url>` &nbsp;|&nbsp; **Alias:** `-download`
-
-Paste any link — the bot auto-detects the platform and downloads:
-
-| Platform        | Type                     |
-| --------------- | ------------------------ |
-| **TikTok**      | Video + Slideshow images |
-| **Instagram**   | Photos & Videos          |
-| **Pinterest**   | Images / Videos / GIFs   |
-| **Facebook**    | Videos & Photos          |
-| **Twitter / X** | Videos & Images          |
-| **Threads**     | Videos & Images          |
-| **Videy**       | Video                    |
-| **Mega.nz**     | Files                    |
-| **SoundCloud**  | Audio                    |
-| **Spotify**     | Audio (MP3)              |
-| **YouTube**     | Audio (MP3)              |
-| **Sfile**       | Files                    |
-| **MediaFire**   | Files                    |
-
-> Reply to a message containing a link — it works without `-dl` too!
-
----
-
-### 🎭 Anime Reaction Commands (26)
-
-> Tag or reply to a user to react to them. Uses animated GIFs from the waifu.pics API.
-
-`-bite` &nbsp;`-blush` &nbsp;`-bonk` &nbsp;`-bully` &nbsp;`-cringe` &nbsp;`-cry` &nbsp;`-cuddle` &nbsp;`-dance` &nbsp;`-glomp` &nbsp;`-handhold` &nbsp;`-happy` &nbsp;`-highfive` &nbsp;`-hug` &nbsp;`-kick` &nbsp;`-kill` &nbsp;`-kiss` &nbsp;`-lick` &nbsp;`-nom` &nbsp;`-pat` &nbsp;`-poke` &nbsp;`-slap` &nbsp;`-smile` &nbsp;`-smug` &nbsp;`-wave` &nbsp;`-wink` &nbsp;`-yeet`
-
----
-
-### 🔖 Sticker Commands
-
-| Command        | Aliases        | Description                                              |
-| -------------- | -------------- | -------------------------------------------------------- |
-| `-sticker`     | `-s`           | Create sticker from image or video (≤ 15s)               |
-| `-steal`       | `-take`        | Re-pack a sticker with custom pack/author name           |
-| `-stickercrop` | `-scrop`       | Create a cropped (non-full) sticker                      |
-| `-smeme`       | `-stickermeme` | Create a meme sticker from an image + caption            |
-| `-quote`       | `-q`           | Create a quote sticker from text or a replied message    |
-| `-emojimix`    | —              | Mix two emojis: `-emojimix 🦉+🤣` (Google Emoji Kitchen) |
-
----
-
-### 🔄 Converter Commands
-
-| Command  | Aliases     | Description                                                   |
-| -------- | ----------- | ------------------------------------------------------------- |
-| `-toimg` | `-toimage`  | Convert a sticker to a PNG image                              |
-| `-togif` | —           | Convert an animated sticker to GIF                            |
-| `-tomp4` | —           | Convert an animated sticker to MP4 video                      |
-| `-tomp3` | `-toaudio`  | Convert video or audio to MP3                                 |
-| `-tourl` | —           | Upload any media and get a direct URL (via Catbox, max 200MB) |
-| `-topdf` | `-imgtopdf` | Convert an image to a PDF document                            |
-| `-toqr`  | —           | Convert any URL or text to a QR code image                    |
-
----
-
-### 🎮 Fun Commands
-
-| Command       | Description                                  |
-| ------------- | -------------------------------------------- |
-| `-truth`      | Get a random truth question (100+ questions) |
-| `-dare`       | Get a random dare challenge (100+ dares)     |
-| `-coinflip`   | Flip a coin — Heads or Tails                 |
-| `-dice <max>` | Roll a dice with a custom number of sides    |
-| `-fact`       | Get a random interesting fact                |
-
----
-
-### 🤖 AI Commands
-
-| Command    | Aliases | AI Model                          |
-| ---------- | ------- | --------------------------------- |
-| `-gemini`  | `-ai`   | Google Gemini (gemini-flash-lite) |
-| `-chatgpt` | `-gpt`  | OpenAI ChatGPT                    |
-| `-claude`  | —       | Anthropic Claude                  |
-
-> Set `GEMINI_API`, `OPENAI_API`, or `CLAUDE_API` in `.env` to enable. Supports multiple comma-separated keys for load distribution.
-
----
-
-### 🧩 Plugin Manager Commands
-
-| Command                           | Description                                           |
-| --------------------------------- | ----------------------------------------------------- |
-| `-install <url>`                  | Install a plugin from any URL or GitHub Gist          |
-| `-uninstall <name / index / all>` | Uninstall by plugin name, list index number, or `all` |
-| `-plugins`                        | List all currently installed extra plugins            |
-| `-pluginlist`                     | Browse the official Atlas plugin store                |
+> **Tip:** You can view the full list of available commands anytime by typing `-help` in your chat!
 
 ---
 
