@@ -22,16 +22,17 @@ import { serialize, WAConnection } from "./System/whatsapp.js";
 import { smsg, getBuffer, getSizeMedia } from "./System/Function2.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 fs.writeFileSync(path.join(__dirname, "atlas.pid"), process.pid.toString());
 
-// Map of noise prefixes → clean replacement line
+// Log Noise Filter
 const _BAILEYS_NOISE_MAP = {
-  "Failed to decrypt message with any known session": "[ ATLAS ] Signal: failed to decrypt (session key mismatch — skipped)",
-  "Session error:": "[ ATLAS ] Signal: session error (Bad MAC — skipped)",
-  "Closing open session in favor of incoming prekey bundle": "[ ATLAS ] Signal: rotating session (new prekey bundle received)",
+  "Failed to decrypt message": "[ ATLAS ] Signal: decryption failed (skipped)",
+  "Session error:": "[ ATLAS ] Signal: session error (Bad MAC)",
+  "Closing open session": "[ ATLAS ] Signal: rotating session",
   "Closing session:": null,
   "Opening session:": null,
 };
@@ -43,21 +44,12 @@ const _matchNoise = (str) => {
   return { matched: false };
 };
 
-// Console Patches
 const _origLog = console.log;
 console.log = (...args) => {
   const first = String(args[0] ?? "");
   const { matched, replacement } = _matchNoise(first);
   if (matched) { if (replacement) _origLog(replacement); return; }
   _origLog(...args);
-};
-
-const _origErr = console.error;
-console.error = (...args) => {
-  const first = String(args[0] ?? "");
-  const { matched, replacement } = _matchNoise(first);
-  if (matched) { if (replacement) _origLog(replacement); return; }
-  _origErr(...args);
 };
 
 import express from "express";
@@ -80,21 +72,10 @@ const store = {
   contacts: {},
   messages: {},
   bind(ev) {
-    let _lidLogTimer = null;
     ev.on("contacts.upsert", (contacts) => {
       for (const contact of contacts) {
         store.contacts[contact.id] = contact;
-        const phoneJid = contact.id?.endsWith("@s.whatsapp.net") ? contact.id : null;
-        const lidJid = contact.id?.endsWith("@lid") ? contact.id : contact.lid?.endsWith("@lid") ? contact.lid : null;
-        if (phoneJid && lidJid) {
-          global.lidToJidMap.set(lidJid, phoneJid);
-          global.lidToJidMap.set(phoneJid, lidJid);
-        }
       }
-      clearTimeout(_lidLogTimer);
-      _lidLogTimer = setTimeout(() => {
-        if (global.lidToJidMap.size > 0) _origLog(`[ ATLAS ] LID map ready: ${global.lidToJidMap.size / 2} contact(s) mapped`);
-      }, 300);
     });
     ev.on("messages.upsert", ({ messages }) => {
       for (const msg of messages) {
@@ -120,14 +101,11 @@ const startAtlas = async () => {
   } catch (err) {
     console.error(chalk.redBright(`[ EXCEPTION ] MongoDB error: ${err.message}`));
   }
-  
+
   mongoAuth = new MongoAuth(sessionId);
   const { state, saveCreds, clearState } = await mongoAuth.init();
   
   console.log(figlet.textSync("ATLAS", { font: "Standard", width: 70 }));
-
-  const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
-  global.botVersion = pkg.version;
 
   await installPlugin();
   const { version } = await fetchLatestBaileysVersion();
@@ -140,7 +118,7 @@ const startAtlas = async () => {
     keepAliveIntervalMs: 25_000,
   });
 
-  // CRITICAL FIX: Define decodeJid BEFORE store.bind or events trigger
+  // FIXED: Define decodeJid BEFORE store.bind or events trigger
   Atlas.decodeJid = (jid) => {
     if (!jid) return jid;
     if (/:\d+@/gi.test(jid)) {
@@ -157,17 +135,14 @@ const startAtlas = async () => {
     console.log(chalk.cyan(`[ ATLAS ] Checking plugins...`));
     let plugins = [];
     try { plugins = await getPluginURLs(); } catch (err) {}
-    if (plugins.length) {
-      for (const pluginUrl of plugins) {
-        try {
-          const { body, statusCode } = await got(pluginUrl);
-          if (statusCode == 200) {
-            const fileName = path.basename(pluginUrl);
-            const filePath = path.join("Plugins", fileName);
-            fs.writeFileSync(filePath, body);
-          }
-        } catch (error) {}
-      }
+    for (const pluginUrl of plugins) {
+      try {
+        const { body, statusCode } = await got(pluginUrl);
+        if (statusCode == 200) {
+          const fileName = path.basename(pluginUrl);
+          fs.writeFileSync(path.join("Plugins", fileName), body);
+        }
+      } catch (e) {}
     }
   }
 
@@ -187,10 +162,8 @@ const startAtlas = async () => {
       let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
       if (reason === DisconnectReason.loggedOut || reason === DisconnectReason.badSession) {
         await clearState();
-        startAtlas();
-      } else {
-        startAtlas();
       }
+      startAtlas();
     }
     if (qr) {
       QR_GENERATE = qr;
@@ -207,22 +180,10 @@ const startAtlas = async () => {
     if (m.key?.remoteJid === "status@broadcast") return;
     core(Atlas, m, commands, chatUpdate);
   });
-
-  // Helper Methods
-  Atlas.getName = (jid, withoutContact = false) => {
-    let id = Atlas.decodeJid(jid);
-    let v = id === Atlas.decodeJid(Atlas.user.id) ? Atlas.user : store.contacts[id] || {};
-    return (withoutContact ? "" : v.name) || v.subject || v.verifiedName || jid.split('@')[0];
-  };
-
-  Atlas.sendText = (jid, text, quoted = "", options) =>
-    Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
-
 };
 
 startAtlas();
 
-// Web Server Endpoints
 app.use("/", express.static(join(__dirname, "Frontend")));
 app.get("/api/status", (req, res) => res.json({ status }));
 app.get("/api/qr", async (req, res) => {
@@ -232,4 +193,4 @@ app.get("/api/qr", async (req, res) => {
   res.json({ status: "qr", qr: qrDataUrl });
 });
 
-app.listen(PORT, () => console.log(`[ ATLAS ] GUI Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`[ ATLAS ] GUI Server port ${PORT}`));
