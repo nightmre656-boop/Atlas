@@ -69,59 +69,103 @@ const store = {
   },
 };
 
-const startAtlas = async () => {
-  // ── MongoDB ──────────────────────────────────────────────────────────────
+// ── Plugin installer ─────────────────────────────────────────────────────────
+// Called ONCE at startup — not on every reconnect
+async function installPlugin() {
+  console.log(chalk.cyan(`[ ATLAS ] Checking plugins...`));
   try {
-    await mongoose.connect(mongodb);
-    console.log(chalk.green(`[ ATLAS ] MongoDB connected ✓`));
-  } catch (err) {
-    console.error(chalk.red(`[ ERROR ] MongoDB: ${err.message}`));
+    const plugins = await getPluginURLs();
+    for (const url of plugins) {
+      const name = url.split("/").pop();
+      const { body } = await got(url);
+      fs.writeFileSync(join(__dirname, "Plugins", name), body);
+    }
+  } catch (e) {
+    console.log(chalk.red("[ ATLAS ] Plugin install error: " + e.message));
   }
+}
 
-  const mongoAuth = new MongoAuth(sessionId);
-  const { state, saveCreds, clearState } = await mongoAuth.init();
+// ── Reconnect backoff state ──────────────────────────────────────────────────
+let reconnectAttempts = 0;
+const MAX_RECONNECT_DELAY = 30_000; // cap at 30 seconds
+
+function getReconnectDelay() {
+  // Exponential backoff: 2s → 4s → 8s → 16s → 30s (capped)
+  const delay = Math.min(2000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+  reconnectAttempts++;
+  return delay;
+}
+
+// ── WhatsApp socket ──────────────────────────────────────────────────────────
+const startAtlas = async (mongoAuth, clearState) => {
+  const { state, saveCreds } = await mongoAuth.init();
   const { version } = await fetchLatestBaileysVersion();
 
-  console.log(figlet.textSync("ATLAS-MD", { font: "Small" }));
-
-  // ── Socket ───────────────────────────────────────────────────────────────
   const Atlas = makeWASocket({
     logger: pino({ level: "silent" }),
     auth: state,
     version,
     browser: ["Ubuntu", "Chrome", "20.0.04"],
     printQRInTerminal: false,
+    keepAliveIntervalMs: 25_000, // prevents silent disconnects
   });
 
-  // Attach helpers immediately — before any event fires
+  // Attach decodeJid BEFORE any event fires
   Atlas.decodeJid = decodeJid;
   AtlasSocket = Atlas;
 
   store.bind(Atlas.ev);
-  await installPlugin();
-  await readcommands();
-
   Atlas.ev.on("creds.update", saveCreds);
   Atlas.serializeM = (m) => smsg(Atlas, m, store);
 
   // ── Connection events ────────────────────────────────────────────────────
   Atlas.ev.on("connection.update", async (update) => {
     const { lastDisconnect, connection, qr } = update;
+
     if (connection) {
       status = connection;
       console.log(chalk.cyan(`[ ATLAS ] Server Status => ${connection}`));
     }
+
     if (qr) {
       QR_GENERATE = qr;
       qrcodeTerminal.generate(qr, { small: true });
     }
-    if (connection === "close") {
-      const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-      if (reason === DisconnectReason.loggedOut) await clearState();
-      startAtlas();
-    }
+
     if (connection === "open") {
-      console.log(chalk.green("[ ATLAS ] Connected Successfully!"));
+      reconnectAttempts = 0; // reset backoff on success
+      console.log(chalk.green("[ ATLAS ] Connected Successfully! ✓"));
+    }
+
+    if (connection === "close") {
+      const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      const reason = lastDisconnect?.error?.message || "Unknown";
+      console.log(chalk.red(`[ ATLAS ] Disconnected — Code: ${statusCode} | Reason: ${reason}`));
+
+      // Logged out — wipe session and start fresh
+      if (statusCode === DisconnectReason.loggedOut) {
+        console.log(chalk.red("[ ATLAS ] Logged out. Clearing session..."));
+        await clearState();
+        reconnectAttempts = 0;
+        startAtlas(mongoAuth, clearState);
+        return;
+      }
+
+      // Fatal errors — do not auto-reconnect
+      if (
+        statusCode === DisconnectReason.forbidden ||
+        statusCode === DisconnectReason.badSession
+      ) {
+        console.log(chalk.red("[ ATLAS ] Fatal disconnect. Manual intervention required."));
+        return;
+      }
+
+      // Everything else — reconnect with exponential backoff
+      const delay = getReconnectDelay();
+      console.log(
+        chalk.yellow(`[ ATLAS ] Reconnecting in ${delay / 1000}s... (attempt ${reconnectAttempts})`)
+      );
+      setTimeout(() => startAtlas(mongoAuth, clearState), delay);
     }
   });
 
@@ -131,30 +175,43 @@ const startAtlas = async () => {
     const msg = chatUpdate.messages[0];
     if (!msg.message) return;
 
-    // Safety net — should never be needed but guards against edge cases
+    // Safety net — should never trigger but guards edge cases
     if (typeof Atlas.decodeJid !== "function") Atlas.decodeJid = decodeJid;
 
     const m = serialize(Atlas, msg);
     core(Atlas, m, commands, chatUpdate);
   });
-
-  // ── Plugin installer ─────────────────────────────────────────────────────
-  async function installPlugin() {
-    console.log(chalk.cyan(`[ ATLAS ] Checking plugins...`));
-    try {
-      const plugins = await getPluginURLs();
-      for (const url of plugins) {
-        const name = url.split("/").pop();
-        const { body } = await got(url);
-        fs.writeFileSync(join(__dirname, "Plugins", name), body);
-      }
-    } catch (e) {
-      console.log(chalk.red("[ ATLAS ] Plugin install error: " + e.message));
-    }
-  }
 };
 
-startAtlas();
+// ── Bootstrap (runs once) ────────────────────────────────────────────────────
+const bootstrap = async () => {
+  // 1. Connect to MongoDB
+  try {
+    await mongoose.connect(mongodb);
+    console.log(chalk.green(`[ ATLAS ] MongoDB connected ✓`));
+  } catch (err) {
+    console.error(chalk.red(`[ ERROR ] MongoDB: ${err.message}`));
+    process.exit(1);
+  }
+
+  // 2. Set up MongoAuth once
+  const mongoAuth = new MongoAuth(sessionId);
+  const { clearState } = await mongoAuth.init();
+
+  // 3. Print banner
+  console.log(figlet.textSync("ATLAS-MD", { font: "Small" }));
+
+  // 4. Install plugins ONCE
+  await installPlugin();
+
+  // 5. Load commands ONCE
+  await readcommands();
+
+  // 6. Start WhatsApp socket
+  await startAtlas(mongoAuth, clearState);
+};
+
+bootstrap();
 
 // ── Express API ──────────────────────────────────────────────────────────────
 app.get("/api/status", (req, res) => res.json({ status }));
