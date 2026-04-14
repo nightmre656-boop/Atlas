@@ -32,6 +32,16 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 commands.prefix = global.prefa;
 
+// FIXED: Define mongodb and sessionId from environment variables
+const mongodb = process.env.MONGODB_URI;
+const sessionId = process.env.SESSION_ID || "atlas_session";
+
+// Check if MongoDB URI is provided
+if (!mongodb) {
+  console.error(chalk.red("[ ERROR ] MONGODB_URI environment variable is not set!"));
+  process.exit(1);
+}
+
 let QR_GENERATE = "invalid";
 let status = "initializing";
 let AtlasSocket = null;
@@ -87,7 +97,7 @@ async function installPlugin() {
 
 // ── Reconnect backoff state ──────────────────────────────────────────────────
 let reconnectAttempts = 0;
-const MAX_RECONNECT_DELAY = 30_000; // cap at 30 seconds
+const MAX_RECONNECT_DELAY = 30000; // cap at 30 seconds
 
 function getReconnectDelay() {
   // Exponential backoff: 2s → 4s → 8s → 16s → 30s (capped)
@@ -106,8 +116,8 @@ const startAtlas = async (mongoAuth, clearState) => {
     auth: state,
     version,
     browser: ["Ubuntu", "Chrome", "20.0.04"],
-    printQRInTerminal: false,
-    keepAliveIntervalMs: 25_000, // prevents silent disconnects
+    printQRInTerminal: true, // Changed to true so QR appears in logs
+    keepAliveIntervalMs: 25000, // prevents silent disconnects
   });
 
   // Attach decodeJid BEFORE any event fires
