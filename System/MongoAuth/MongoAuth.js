@@ -10,7 +10,6 @@ const __dirname = path.dirname(__filename);
 // All local sessions live under System/session/<sessionId>/
 const SESSION_BASE_DIR = path.join(__dirname, "..", "session");
 
-// Reverse of the old MongoAuth KEY_MAP — maps storage keys back to Baileys key type names
 const LEGACY_KEY_TYPE_MAP = {
   preKeys: "pre-key",
   sessions: "session",
@@ -34,32 +33,62 @@ export default class MongoAuth {
    * Returns { state, saveCreds, clearState } for makeWASocket.
    */
   async init() {
+    // ── Announce which session key is being started ──────────────────────
+    console.log(`[ ATLAS ] Starting session: "${this.sessionId}"`);
+
     const localExists = await this._localExists();
 
     if (!localExists) {
       const mongoExists = await this._mongoExists();
       if (mongoExists) {
         console.log(
-          `[ ATLAS ] Session not found locally — downloading from MongoDB...`
+          `[ ATLAS ] [${this.sessionId}] Session not found locally — downloading from MongoDB...`,
         );
-        await this._downloadToLocal();
-        console.log(`[ ATLAS ] Session restored from MongoDB.`);
+
+        // ── Try download; if it throws, wipe any partial files ────────────
+        try {
+          await this._downloadToLocal();
+        } catch (err) {
+          console.error(
+            `[ EXCEPTION ] [${this.sessionId}] Session download failed: ${err.message} — wiping partial files.`,
+          );
+          await fs.promises.rm(this.dir, { recursive: true, force: true });
+        }
+
+        // ── Post-download integrity check: creds.json must now exist ─────
+        const downloadOk = await this._localExists();
+        if (downloadOk) {
+          console.log(
+            `[ ATLAS ] [${this.sessionId}] Session restored from MongoDB ✓`,
+          );
+        } else {
+          console.log(
+            `[ ATLAS ] [${this.sessionId}] Session download incomplete — starting fresh (QR scan required).`,
+          );
+          await fs.promises.rm(this.dir, { recursive: true, force: true });
+        }
+      } else {
+        // Neither local nor MongoDB — empty dir triggers QR scan
+        console.log(
+          `[ ATLAS ] [${this.sessionId}] No existing session found — QR scan required.`,
+        );
       }
-      // else: neither local nor MongoDB — empty dir triggers QR scan
+    } else {
+      console.log(`[ ATLAS ] [${this.sessionId}] Local session found ✓`);
     }
 
     await fs.promises.mkdir(this.dir, { recursive: true });
 
-    const { state, saveCreds: saveCredsLocal } = await useMultiFileAuthState(this.dir);
+    const { state, saveCreds: saveCredsLocal } = await useMultiFileAuthState(
+      this.dir,
+    );
 
-    // Wrap saveCreds so a MongoDB push happens immediately after every creds save.
-    // This ensures the session is in MongoDB right after the first QR scan.
-    // The periodic GC sync acts as a safety net for key file changes that
-    // don't trigger creds.update (e.g. pre-keys being consumed).
     const saveCreds = async () => {
       await saveCredsLocal();
       await this.pushToMongoDB().catch((err) =>
-        console.error(`[ EXCEPTION ] MongoDB session sync error: ${err.message}`)
+        console.error(
+          `[ EXCEPTION ] MongoDB session sync error: ${err.message}`,
+        ),
       );
     };
 
@@ -104,7 +133,7 @@ export default class MongoAuth {
     await sessionSchema.updateOne(
       { sessionId: this.sessionId },
       { $set: { files, lastSync: new Date() } },
-      { upsert: true }
+      { upsert: true },
     );
   }
 
@@ -124,8 +153,14 @@ export default class MongoAuth {
     try {
       const doc = await sessionSchema.findOne({ sessionId: this.sessionId });
       if (!doc) return false;
-      // New format: files map
-      if (doc.files && Object.keys(doc.files).length > 0) return true;
+      // New format: files map — require at least one non-empty file value
+      if (
+        doc.files &&
+        Object.keys(doc.files).some(
+          (k) => doc.files[k] && doc.files[k].length > 0,
+        )
+      )
+        return true;
       // Legacy format: single session JSON blob
       if (doc.session && doc.session.length > 0) return true;
       return false;
@@ -139,8 +174,6 @@ export default class MongoAuth {
     if (!doc) return;
 
     // ── Legacy format migration ──────────────────────────────────────────
-    // Old MongoAuth stored { creds, keys } as a single JSON string in doc.session.
-    // useMultiFileAuthState expects individual files: creds.json + {type}-{id}.json.
     if (doc.session && !doc.files) {
       await this._migrateLegacySession(doc.session);
       return;
@@ -150,10 +183,16 @@ export default class MongoAuth {
     if (!doc.files) return;
     await fs.promises.mkdir(this.dir, { recursive: true });
     for (const [filename, base64Content] of Object.entries(doc.files)) {
+      if (!base64Content || base64Content.length === 0) {
+        console.log(
+          `[ ATLAS ] [${this.sessionId}] Skipping empty entry in MongoDB session: ${filename}`,
+        );
+        continue;
+      }
       const filePath = path.join(this.dir, filename);
       await fs.promises.writeFile(
         filePath,
-        Buffer.from(base64Content, "base64")
+        Buffer.from(base64Content, "base64"),
       );
     }
   }
@@ -168,7 +207,9 @@ export default class MongoAuth {
     try {
       parsed = JSON.parse(legacySessionString, BufferJSON.reviver);
     } catch (err) {
-      console.error(`[ EXCEPTION ] Failed to parse legacy session blob: ${err.message}`);
+      console.error(
+        `[ EXCEPTION ] Failed to parse legacy session blob: ${err.message}`,
+      );
       return;
     }
 
@@ -178,28 +219,26 @@ export default class MongoAuth {
     if (parsed.creds) {
       await fs.promises.writeFile(
         path.join(this.dir, "creds.json"),
-        JSON.stringify(parsed.creds, BufferJSON.replacer)
+        JSON.stringify(parsed.creds, BufferJSON.replacer),
       );
     }
 
-    // Write individual key files — each key gets its own {type}-{id}.json file
     const keys = parsed.keys || {};
-    for (const [storageKey, baileyType] of Object.entries(LEGACY_KEY_TYPE_MAP)) {
+    for (const [storageKey, baileyType] of Object.entries(
+      LEGACY_KEY_TYPE_MAP,
+    )) {
       const keyData = keys[storageKey];
       if (!keyData || typeof keyData !== "object") continue;
       for (const [id, value] of Object.entries(keyData)) {
         await fs.promises.writeFile(
           path.join(this.dir, `${baileyType}-${id}.json`),
-          JSON.stringify(value, BufferJSON.replacer)
+          JSON.stringify(value, BufferJSON.replacer),
         );
       }
     }
 
-    console.log(
-      `[ ATLAS ] Legacy session migrated to new file-based format.`
-    );
+    console.log(`[ ATLAS ] Legacy session migrated to new file-based format.`);
 
-    // Overwrite the MongoDB document with the new files format
     await this.pushToMongoDB();
   }
 
@@ -215,8 +254,5 @@ export default class MongoAuth {
     }
 
     console.log(`[ ATLAS ] Session cleared from local storage and MongoDB.`);
-    console.log(
-      `[ ATLAS ] Please update SESSION_ID in your .env file before restarting.`
-    );
   }
 }

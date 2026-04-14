@@ -324,11 +324,9 @@ const startAtlas = async () => {
     if (connection === "close") {
       let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
       if (reason === DisconnectReason.badSession) {
-        console.log(
-          `[ ATLAS ] Bad Session File, Please Delete Session and Scan Again.\n`,
-        );
+        console.log(`[ ATLAS ] Bad session detected — clearing and restarting for fresh QR scan...\n`);
         await clearState();
-        process.exit();
+        startAtlas();
       } else if (reason === DisconnectReason.connectionClosed) {
         console.log("[ ATLAS ] Connection closed, reconnecting....\n");
         startAtlas();
@@ -341,11 +339,9 @@ const startAtlas = async () => {
         );
         process.exit();
       } else if (reason === DisconnectReason.loggedOut) {
+        console.log(`[ ATLAS ] Device logged out — clearing session and restarting for fresh QR scan...\n`);
         await clearState();
-        console.log(
-          `[ ATLAS ] Device Logged Out, Please Delete Session and Scan Again.\n`,
-        );
-        process.exit();
+        startAtlas();
       } else if (reason === DisconnectReason.restartRequired) {
         console.log("[ ATLAS ] Server Restarting...\n");
         startAtlas();

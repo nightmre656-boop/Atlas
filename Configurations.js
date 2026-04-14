@@ -1,5 +1,13 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ override: true });
+
+// Strip inline # comments that some env injectors (e.g. vestauth) leave in the value,
+// then trim surrounding whitespace.
+// Example: "mykey     #old-key  # note" → "mykey"
+const stripEnv = (val, fallback = "") => {
+  if (!val) return fallback;
+  return val.split("#")[0].trim() || fallback;
+};
 
 // Parse a comma-separated env value into a cleaned array, dropping known placeholders
 const parseKeys = (envVal, ...placeholders) => {
@@ -23,11 +31,11 @@ if (!gg) {
 
 global.owner = gg.split(",");
 global.mongodb = process.env.MONGODB || "mongodb://localhost:27017/atlas";
-global.sessionId = process.env.SESSION_ID || "ok";
-global.prefa = process.env.PREFIX || "-";
-global.packname = process.env.PACKNAME || `Atlas Bot`;
-global.author = process.env.AUTHOR || "by: Team Atlas";
-global.port = process.env.PORT || "10000";
+global.sessionId = stripEnv(process.env.SESSION_ID, "ok");
+global.prefa = stripEnv(process.env.PREFIX, "-");
+global.packname = stripEnv(process.env.PACKNAME, `Atlas Bot`);
+global.author = stripEnv(process.env.AUTHOR, "by: Team Atlas");
+global.port = stripEnv(process.env.PORT, "10000");
 
 // Multi-key pools — comma-separate as many keys as you want in .env
 global.geminiAPIKeys = parseKeys(

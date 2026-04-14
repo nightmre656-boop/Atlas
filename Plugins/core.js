@@ -259,11 +259,12 @@ export default {
           fun: { icon: "🎮", label: "ꜰᴜɴ & ᴍᴇᴅɪᴀ" },
           others: { icon: "✨", label: "ᴏᴛʜᴇʀꜱ" },
           plugin: { icon: "🔌", label: "ᴘʟᴜɢɪɴ" },
-          "code-runner": { icon: "💻", label: "ᴄᴏᴅᴇ ʀᴜɴɴᴇʀ" },
+
           "logo-maker": { icon: "🎨", label: "ʟᴏɢᴏ ᴍᴀᴋᴇʀ" },
           logo: { icon: "🖼️", label: "ʟᴏɢᴏ ꜱᴛʏʟᴇꜱ" },
           systemcommands: { icon: "⚙️", label: "ꜱʏꜱᴛᴇᴍ" },
           revive: { icon: "👁️", label: "ᴠɪᴇᴡ ᴏɴᴄᴇ" },
+          tools: { icon: "🧰", label: "ᴛᴏᴏʟꜱ" },
         };
 
         function formatCommands(allCommands) {

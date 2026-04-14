@@ -1,4 +1,4 @@
-import {checkWelcome} from './MongoDB/MongoDb_Core.js';
+import { checkWelcome } from "./MongoDB/MongoDb_Core.js";
 
 export default async (Atlas, anu) => {
   try {
@@ -14,7 +14,7 @@ export default async (Atlas, anu) => {
       try {
         ppuser = await Atlas.profilePictureUrl(num, "image");
       } catch {
-        ppuser = botImage4;
+        ppuser = "https://i.imgur.com/MClOeqe.jpeg";
       }
 
       if (anu.action == "add") {
