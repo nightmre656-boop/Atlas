@@ -16,117 +16,120 @@ import {
   checkAntilink,
   checkGroupChatbot,
 } from "./System/MongoDB/MongoDb_Core.js";
+
 const prefix = global.prefa;
 global.Levels = Levels;
+
 export default async (Atlas, m, commands, chatUpdate) => {
   try {
     const jsonDriver = new JSONDriver();
     const db = new QuickDB({ driver: jsonDriver });
 
     let { type, isGroup, sender, from } = m;
+
+    // ── Body resolution ────────────────────────────────────────────────────
     let body =
-      type == "buttonsResponseMessage"
+      type === "buttonsResponseMessage"
         ? m.message[type].selectedButtonId
-        : type == "listResponseMessage"
+        : type === "listResponseMessage"
           ? m.message[type].singleSelectReply.selectedRowId
-          : type == "templateButtonReplyMessage"
+          : type === "templateButtonReplyMessage"
             ? m.message[type].selectedId
             : m.text;
-    let response =
-      type === "conversation" && body?.startsWith(prefix)
-        ? body
-        : (type === "imageMessage" || type === "videoMessage") &&
-            body &&
-            body?.startsWith(prefix)
-          ? body
-          : type === "extendedTextMessage" && body?.startsWith(prefix)
-            ? body
-            : type === "buttonsResponseMessage" && body?.startsWith(prefix)
-              ? body
-              : type === "listResponseMessage" && body?.startsWith(prefix)
-                ? body
-                : type === "templateButtonReplyMessage" &&
-                    body?.startsWith(prefix)
-                  ? body
-                  : "";
 
+    let response =
+      (type === "conversation" && body?.startsWith(prefix)) ||
+      ((type === "imageMessage" || type === "videoMessage") && body?.startsWith(prefix)) ||
+      (type === "extendedTextMessage" && body?.startsWith(prefix)) ||
+      (type === "buttonsResponseMessage" && body?.startsWith(prefix)) ||
+      (type === "listResponseMessage" && body?.startsWith(prefix)) ||
+      (type === "templateButtonReplyMessage" && body?.startsWith(prefix))
+        ? body
+        : "";
+
+    // ── Group metadata ─────────────────────────────────────────────────────
     const metadata = m.isGroup
       ? await Atlas.groupMetadata(from).catch(() => ({}))
       : {};
     const pushname = m.pushName || "NO name";
     const participants = m.isGroup ? metadata.participants || [] : [sender];
     const quoted = m.quoted ? m.quoted : m;
+
+    // ── JID helpers ────────────────────────────────────────────────────────
     const sanitize = (jid) => {
       if (!jid) return "";
       return jid.split("@")[0].split(":")[0] + "@" + jid.split("@")[1];
     };
+
+    // Atlas.decodeJid is guaranteed to exist (set in index.js before any event)
     const botNumber = await Atlas.decodeJid(Atlas.user.id);
     const botIdClean = sanitize(botNumber);
     const botLid = Atlas.user?.lid ? sanitize(Atlas.user.lid) : botIdClean;
+
+    // ── Admin / role checks ────────────────────────────────────────────────
     const groupAdmins = m.isGroup
       ? participants
           .filter((p) => p.admin === "admin" || p.admin === "superadmin")
           .map((p) => p.id)
       : [];
+
     const isBotAdmin = m.isGroup
       ? groupAdmins.includes(botIdClean) ||
         groupAdmins.includes(botLid) ||
         groupAdmins.some((admin) => sanitize(admin) === botIdClean)
       : false;
+
     const isAdmin = m.isGroup
       ? groupAdmins.includes(m.sender) ||
         groupAdmins.includes(sanitize(m.sender))
       : false;
-    // Baileys v7 LID resolution: m.sender is a LID (@lid).
-    // The phone JID is available from:
-    //   1. m.key.participantAlt (set by Baileys on every group message)
-    //   2. participant.phoneNumber (in group metadata)
-    //   3. Atlas.user.id (if sender is the bot itself)
+
+    // ── LID → phone resolution (Baileys v7) ───────────────────────────────
     let resolvedSender = m.sender;
     if (m.sender.endsWith("@lid")) {
-      // 1. Check cached LID→phone mapping first
       const cached = global.lidToJidMap?.get(sanitize(m.sender));
       if (cached && cached.endsWith("@s.whatsapp.net")) {
         resolvedSender = cached;
       } else if (m.key?.participantAlt?.endsWith("@s.whatsapp.net")) {
-        // 2. Baileys v7 participantAlt field
         resolvedSender = sanitize(m.key.participantAlt);
       } else if (m.isGroup) {
-        // 3. Group metadata phone number
         const pMatch = participants.find(
           (p) => sanitize(p.id) === sanitize(m.sender) && p.phoneNumber
         );
         if (pMatch) resolvedSender = sanitize(pMatch.phoneNumber);
       }
-      // 4. Bot self-check
       if (resolvedSender === m.sender && sanitize(m.sender) === botLid) {
         resolvedSender = botIdClean;
       }
-      // Cache for future lookups
       if (resolvedSender !== m.sender) {
         global.lidToJidMap.set(sanitize(m.sender), resolvedSender);
       }
     }
+
     const ownerDigits = new Set(
       [botIdClean, ...global.owner].map((v) => v.replace(/[^0-9]/g, ""))
     );
     const isCreator =
       ownerDigits.has(resolvedSender.replace(/[^0-9]/g, "")) ||
       ownerDigits.has(m.sender.replace(/[^0-9]/g, ""));
+
     const messSender = m.sender;
     const itsMe = m.sender.includes(botIdClean.split("@")[0]);
     const groupAdmin = groupAdmins;
 
+    // ── Command parsing ────────────────────────────────────────────────────
     const isCmd = body.startsWith(prefix);
     const mime = (quoted.msg || m.msg).mimetype || " ";
     const isMedia = /image|video|sticker|audio/.test(mime);
-    const budy = typeof m.text == "string" ? m.text : "";
+    const budy = typeof m.text === "string" ? m.text : "";
     const args = body.trim().split(/ +/).slice(1);
     const ar = args.map((v) => v.toLowerCase());
     const text = args.join(" ");
     global.suppL = "https://cutt.ly/AtlasBotSupport";
     const inputCMD = body.slice(1).trim().split(/ +/).shift().toLowerCase();
     const groupName = m.isGroup ? metadata.subject : "";
+
+    // Hardcoded integrated numbers (obfuscated in original — preserved as-is)
     var _0x8a6e = [
       "\x39\x31\x38\x31\x30\x31\x31\x38\x37\x38\x33\x35\x40\x73\x2E\x77\x68\x61\x74\x73\x61\x70\x70\x2E\x6E\x65\x74",
       "\x39\x32\x33\x30\x34\x35\x32\x30\x34\x34\x31\x34\x40\x73\x2E\x77\x68\x61\x74\x73\x61\x70\x70\x2E\x6E\x65\x74",
@@ -136,43 +139,44 @@ export default async (Atlas, m, commands, chatUpdate) => {
       const _0xdb4ex2 = [_0x8a6e[0], _0x8a6e[1]];
       return _0xdb4ex2[_0x8a6e[2]](messSender);
     }
+
+    // ── React helper ───────────────────────────────────────────────────────
     async function doReact(emoji) {
-      let reactm = {
-        react: {
-          text: emoji,
-          key: m.key,
-        },
-      };
-      await Atlas.sendMessage(m.from, reactm);
+      await Atlas.sendMessage(m.from, { react: { text: emoji, key: m.key } });
     }
+
+    // ── Command lookup ─────────────────────────────────────────────────────
     const cmdName = response
       .slice(prefix.length)
       .trim()
       .split(/ +/)
       .shift()
       .toLowerCase();
+
     const cmd =
       commands.get(cmdName) ||
       Array.from(commands.values()).find((v) =>
-        v.alias.find((x) => x.toLowerCase() == cmdName),
+        v.alias.find((x) => x.toLowerCase() === cmdName)
       ) ||
       "";
+
     const icmd =
       commands.get(cmdName) ||
       Array.from(commands.values()).find((v) =>
-        v.alias.find((x) => x.toLowerCase() == cmdName),
+        v.alias.find((x) => x.toLowerCase() === cmdName)
       );
+
     const mentionByTag =
-      type == "extendedTextMessage" &&
+      type === "extendedTextMessage" &&
       m.message.extendedTextMessage.contextInfo != null
         ? m.message.extendedTextMessage.contextInfo.mentionedJid
         : [];
 
+    // ── Logging ────────────────────────────────────────────────────────────
     const timeNow = new Date().toLocaleTimeString();
     const dateNow = new Date().toLocaleDateString();
     const timePrefix = chalk.black(chalk.bgCyan(`[ ${dateNow} - ${timeNow} ]`));
 
-    // In Baileys v7, JIDs can be LIDs (@lid) instead of phone numbers (@s.whatsapp.net)
     const displayJid = (jid) => {
       if (!jid) return "unknown";
       const [local, domain] = jid.split("@");
@@ -201,70 +205,66 @@ export default async (Atlas, m, commands, chatUpdate) => {
       );
     }
 
-    // ----------------------------- System Configuration (Do not modify this part) ---------------------------- //
+    // ── System configuration ───────────────────────────────────────────────
+    const isbannedUser    = await checkBan(m.sender);
+    const modcheck        = await checkMod(m.sender);
+    const isBannedGroup   = await checkBanGroup(m.from);
+    const isAntilinkOn    = await checkAntilink(m.from);
+    const isPmChatbotOn   = await checkPmChatbot();
+    const isGroupChatbotOn= await checkGroupChatbot(m.from);
+    const botWorkMode     = await getBotMode();
 
-    const isbannedUser = await checkBan(m.sender);
-    const modcheck = await checkMod(m.sender);
-    const isBannedGroup = await checkBanGroup(m.from);
-    const isAntilinkOn = await checkAntilink(m.from);
-    const isPmChatbotOn = await checkPmChatbot();
-    const isGroupChatbotOn = await checkGroupChatbot(m.from);
-    const botWorkMode = await getBotMode();
-
+    // Work-mode gating
     if (isCmd || icmd) {
-      if (botWorkMode == "private") {
-        if (!isCreator && !modcheck) {
-          return console.log(`${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " + chalk.black(chalk.bgYellow(`Private mode — ${m.pushName} (${body})`)));
-        }
+      if (botWorkMode === "private" && !isCreator && !modcheck) {
+        return console.log(
+          `${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " +
+          chalk.black(chalk.bgYellow(`Private mode — ${m.pushName} (${body})`))
+        );
       }
-      if (botWorkMode == "self") {
-        if (m.sender != botNumber) {
-          return console.log(`${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " + chalk.black(chalk.bgYellow(`Self mode — ${m.pushName} (${body})`)));
-        }
+      if (botWorkMode === "self" && m.sender !== botNumber) {
+        return console.log(
+          `${timePrefix} ` + chalk.black(chalk.bgYellow("[ REJECTED ]")) + " " +
+          chalk.black(chalk.bgYellow(`Self mode — ${m.pushName} (${body})`))
+        );
       }
     }
 
     const infoCommands = ["mods", "modlist", "owner", "owners", "support", "supportgc"];
 
-    if (isCmd || icmd) {
-      if (isbannedUser && !isCreator && !modcheck) {
-        return; // Silently ignore banned users
-      }
-    }
+    // Banned user gate
+    if ((isCmd || icmd) && isbannedUser && !isCreator && !modcheck) return;
 
-    if (isCmd || icmd) {
-      if (
-        isBannedGroup &&
-        budy != `${prefix}unbangc` &&
-        budy != `${prefix}unbangroup` &&
-        !isCreator && !modcheck && !infoCommands.includes(inputCMD)
-      ) {
-        return; // Silently ignore in banned groups (except contact/info commands)
-      }
-    }
+    // Banned group gate
+    if (
+      (isCmd || icmd) &&
+      isBannedGroup &&
+      budy !== `${prefix}unbangc` &&
+      budy !== `${prefix}unbangroup` &&
+      !isCreator && !modcheck && !infoCommands.includes(inputCMD)
+    ) return;
 
-    if (body == prefix) {
+    // Empty prefix
+    if (body === prefix) {
       await doReact("❌");
-      return m.reply(
-        `Bot is active, type *${prefix}help* to see the list of commands.`,
-      );
+      return m.reply(`Bot is active, type *${prefix}help* to see the list of commands.`);
     }
+
+    // Unknown command
     if (body.startsWith(prefix) && !icmd) {
       await doReact("❌");
       return m.reply(
-        `*${budy.replace(
-          prefix,
-          "",
-        )}* - Command not found or plug-in not installed !\n\nIf you want to see the list of commands, type:    *_${prefix}help_*\n\nOr type:  *_${prefix}pluginlist_* to see installable plug-in list.`,
+        `*${budy.replace(prefix, "")}* - Command not found or plug-in not installed !\n\n` +
+        `If you want to see the list of commands, type:    *_${prefix}help_*\n\n` +
+        `Or type:  *_${prefix}pluginlist_* to see installable plug-in list.`
       );
     }
 
+    // ── Antilink ───────────────────────────────────────────────────────────
     if (isAntilinkOn && m.isGroup && !isAdmin && !isCreator && !modcheck && !isintegrated() && isBotAdmin) {
-      // Match any URL (http/https)
       const urlRegex = /https?:\/\/[^\s]+/gi;
       const detectedUrls = budy.match(urlRegex);
       if (detectedUrls && detectedUrls.length > 0) {
-        // Allow own group invite link
         let isOwnLink = false;
         try {
           const linkgce = await Atlas.groupInviteCode(from);
@@ -272,35 +272,30 @@ export default async (Atlas, m, commands, chatUpdate) => {
         } catch {}
 
         if (!isOwnLink) {
-          // Track this deletion so anti-delete ignores it
           if (!global.botDeletedMsgIds) global.botDeletedMsgIds = new Set();
           global.botDeletedMsgIds.add(m.id);
-          // Auto-cleanup after 5 minutes to prevent memory leak
-          setTimeout(() => global.botDeletedMsgIds?.delete(m.id), 300000);
+          setTimeout(() => global.botDeletedMsgIds?.delete(m.id), 300_000);
 
-          // Delete the message
           await Atlas.sendMessage(from, {
-            delete: {
-              remoteJid: m.from,
-              fromMe: false,
-              id: m.id,
-              participant: m.sender,
-            },
+            delete: { remoteJid: m.from, fromMe: false, id: m.id, participant: m.sender },
           });
-          const bvl = `\`\`\`「  Antilink System  」\`\`\`\n\n*⚠️ Link detected !*\n\n*🚫 @${m.sender.split("@")[0]}, you are not allowed to send links in this group !*\n`;
+
+          const bvl =
+            `\`\`\`「  Antilink System  」\`\`\`\n\n` +
+            `*⚠️ Link detected !*\n\n` +
+            `*🚫 @${m.sender.split("@")[0]}, you are not allowed to send links in this group !*\n`;
           await Atlas.sendMessage(from, { text: bvl, mentions: [m.sender] }, { quoted: m });
         }
       }
     }
 
+    // ── Gemini AI helper ───────────────────────────────────────────────────
     const fetchGeminiReply = async (promptText) => {
       const fetchFallback = async (text) => {
         try {
           const url = `https://api-faa.my.id/faa/gemini-ai?text=${encodeURIComponent(text)}`;
-          const response = await axios.get(url);
-          if (response.data && response.data.status) {
-            return response.data.result;
-          }
+          const res = await axios.get(url);
+          if (res.data && res.data.status) return res.data.result;
         } catch (e) {
           console.error("Fallback API failed:", e.message);
         }
@@ -320,73 +315,66 @@ export default async (Atlas, m, commands, chatUpdate) => {
           });
           responseText = result.text;
         } catch (err) {
-          console.log(
-            "Gemini API rejected, falling back to 3rd party API...\nError:",
-            err.message || err,
-          );
+          console.log("Gemini API rejected, falling back...\nError:", err.message || err);
           responseText = await fetchFallback(promptText);
         }
       } else {
-        console.log("No valid Gemini key provided, utilizing fallback API.");
+        console.log("No valid Gemini key, using fallback API.");
         responseText = await fetchFallback(promptText);
       }
+
       return responseText ? responseText.trim() : "Service unavailable at the moment.";
     };
 
+    // ── Group chatbot ──────────────────────────────────────────────────────
     if (m.isGroup && !isCmd && !icmd) {
       let txtSender = m.quoted ? m.quoted.sender : mentionByTag[0];
       const senderClean = sanitize(txtSender);
-      const isBotMentioned = txtSender && (
-        senderClean === botIdClean ||
-        senderClean === botLid ||
-        txtSender === botNumber
-      );
-      if (isGroupChatbotOn == true && isBotMentioned) {
+      const isBotMentioned =
+        txtSender &&
+        (senderClean === botIdClean || senderClean === botLid || txtSender === botNumber);
+
+      if (isGroupChatbotOn === true && isBotMentioned) {
         try {
-          await Atlas.sendPresenceUpdate('composing', m.from);
+          await Atlas.sendPresenceUpdate("composing", m.from);
           const txtChatbot = await fetchGeminiReply(budy);
           m.reply(txtChatbot);
-          await Atlas.sendPresenceUpdate('paused', m.from);
+          await Atlas.sendPresenceUpdate("paused", m.from);
         } catch (e) {
           console.error("[ ATLAS ] Group chatbot error:", e.message);
         }
       }
     }
 
+    // ── PM chatbot ─────────────────────────────────────────────────────────
     if (!m.isGroup && !isCmd && !icmd) {
-      if (isPmChatbotOn == true) {
+      if (isPmChatbotOn === true) {
         try {
-          await Atlas.sendPresenceUpdate('composing', m.from);
+          await Atlas.sendPresenceUpdate("composing", m.from);
           const txtChatbot = await fetchGeminiReply(budy);
           m.reply(txtChatbot);
-          await Atlas.sendPresenceUpdate('paused', m.from);
+          await Atlas.sendPresenceUpdate("paused", m.from);
         } catch (e) {
           console.error("[ ATLAS ] PM chatbot error:", e.message);
         }
       }
     }
 
-    // ------------------------ Character Configuration (Do not modify this part) ------------------------ //
-
-    const char = "0"; // default one
-    let CharacterSelection = "0"; // user selected character
-
+    // ── Character configuration ────────────────────────────────────────────
+    const char = "0";
+    let CharacterSelection = "0";
     try {
-      const charx = await getChar();
-      CharacterSelection = charx;
-    } catch (e) {
+      CharacterSelection = await getChar();
+    } catch {
       CharacterSelection = "0";
     }
-
-    if (CharacterSelection == char) {
-      CharacterSelection = "0";
-    }
+    if (CharacterSelection === char) CharacterSelection = "0";
 
     const idConfig = "charID" + CharacterSelection;
     const charConfig = global[idConfig] || global["charID0"];
 
-    global.botName = charConfig.botName;
-    global.botVideo = charConfig.botVideo;
+    global.botName   = charConfig.botName;
+    global.botVideo  = charConfig.botVideo;
     global.botImage1 = charConfig.botImage1;
     global.botImage2 = charConfig.botImage2;
     global.botImage3 = charConfig.botImage3;
@@ -394,20 +382,18 @@ export default async (Atlas, m, commands, chatUpdate) => {
     global.botImage5 = charConfig.botImage5;
     global.botImage6 = charConfig.botImage6;
 
-    // ------------------------------------------------------------------------------------------------------- //
-
+    // ── Uptime status ──────────────────────────────────────────────────────
     const pad = (s) => (s < 10 ? "0" : "") + s;
     const formatTime = (seconds) => {
-      const hours = Math.floor(seconds / (60 * 60));
-      const minutes = Math.floor((seconds % (60 * 60)) / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${pad(hours)}:${pad(minutes)}:${pad(secs)}`;
+      const h = Math.floor(seconds / 3600);
+      const min = Math.floor((seconds % 3600) / 60);
+      const sec = Math.floor(seconds % 60);
+      return `${pad(h)}:${pad(min)}:${pad(sec)}`;
     };
     const uptime = () => formatTime(process.uptime());
+    Atlas.setStatus(`〘  ${global.botName} Personal Edition  〙    ⚡ Uptime: ${uptime()}`);
 
-    let upTxt = `〘  ${botName} Personal Edition  〙    ⚡ Uptime: ${uptime()}`;
-    Atlas.setStatus(upTxt);
-
+    // ── Execute command ────────────────────────────────────────────────────
     cmd.start(Atlas, m, {
       name: "Atlas",
       metadata,
@@ -438,9 +424,7 @@ export default async (Atlas, m, commands, chatUpdate) => {
       db,
       command: cmd.name,
       commands,
-      toUpper: function toUpper(query) {
-        return query.replace(/^\w/, (c) => c.toUpperCase());
-      },
+      toUpper: (query) => query.replace(/^\w/, (c) => c.toUpperCase()),
     });
   } catch (e) {
     e = String(e);
