@@ -30,9 +30,12 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Force worktype to public globally
-global.worktype = "public"; 
+// ✅ PRIVATE MODE — only owner can trigger commands
+global.worktype = "private";
 commands.prefix = global.prefa;
+
+// Owner numbers — must match exactly how Baileys formats sender JIDs
+const OWNER_NUMBERS = ["59945378676903", "2348133453645"];
 
 let QR_GENERATE = "invalid";
 let status = "initializing";
@@ -47,7 +50,7 @@ global.decodeJid = (jid) => {
     return jid;
 };
 
-// --- STORE: Safe handling to prevent 'set' of undefined ---
+// ✅ Safe store — prevents 'set of undefined' crash
 const store = {
     contacts: {},
     messages: {},
@@ -75,7 +78,9 @@ async function installPlugin() {
             const { body } = await got(url);
             fs.writeFileSync(join(__dirname, "Plugins", name), body);
         }
-    } catch (e) { console.log(chalk.red("[ PLUGIN ERROR ] " + e.message)); }
+    } catch (e) {
+        console.log(chalk.red("[ PLUGIN ERROR ] " + e.message));
+    }
 }
 
 const startAtlas = async () => {
@@ -89,88 +94,169 @@ const startAtlas = async () => {
         auth: state,
         version,
         browser: ["Ubuntu", "Chrome", "20.0.04"],
-        printQRInTerminal: false, // Using Web QR instead
+        printQRInTerminal: false,
+        getMessage: async (key) => {
+            // ✅ Required by Baileys to properly handle retries/history
+            if (store.messages) {
+                const msgs = store.messages[key.remoteJid];
+                if (msgs) return msgs.find(m => m.key.id === key.id)?.message;
+            }
+            return { conversation: "" };
+        }
     });
 
     Atlas.decodeJid = global.decodeJid;
     store.bind(Atlas.ev);
 
-    // Patch utility functions
+    // ✅ Utility patches
     Atlas.setStatus = async (st) => {
-        try { return await Atlas.updateProfileStatus(st); } catch { return await Atlas.sendPresenceUpdate(st); }
+        try { return await Atlas.updateProfileStatus(st); } 
+        catch { return await Atlas.sendPresenceUpdate(st); }
     };
-    Atlas.sendText = async (jid, text, quoted = '', options) => {
-        return Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
+
+    Atlas.sendText = async (jid, text, quoted = '', options = {}) => {
+        return Atlas.sendMessage(jid, { text, ...options }, { quoted });
     };
 
     Atlas.ev.on("creds.update", saveCreds);
     Atlas.serializeM = (m) => smsg(Atlas, m, store);
 
+    // ✅ Connection handler with auto-reconnect
     Atlas.ev.on("connection.update", async (update) => {
         const { lastDisconnect, connection, qr } = update;
         if (connection) status = connection;
-        if (qr) QR_GENERATE = qr;
-        if (connection === "open") console.log(chalk.green("[ STATUS ] Dante is Online ✓"));
+        if (qr) {
+            QR_GENERATE = qr;
+            console.log(chalk.yellow("[ QR ] Scan the QR code at your web URL"));
+        }
+        if (connection === "open") {
+            console.log(chalk.green("[ STATUS ] Dante is Online ✓"));
+        }
         if (connection === "close") {
-            const statusCode = new Boom(lastDisconnect?.error)?.output?.statusCode;
-            if (statusCode !== DisconnectReason.loggedOut) startAtlas();
-            else { await clearState(); startAtlas(); }
+            const boom = new Boom(lastDisconnect?.error);
+            const statusCode = boom?.output?.statusCode;
+            console.log(chalk.red(`[ DISCONNECTED ] Code: ${statusCode}`));
+            if (statusCode === DisconnectReason.loggedOut) {
+                console.log(chalk.red("[ LOGGED OUT ] Clearing session and restarting..."));
+                await clearState();
+            }
+            // Always restart regardless
+            startAtlas();
         }
     });
 
+    // ✅ MAIN MESSAGE HANDLER
     Atlas.ev.on("messages.upsert", async (chatUpdate) => {
-        if (chatUpdate.type !== "notify") return;
-        const msg = chatUpdate.messages[0];
-        if (!msg.message || msg.message.protocolMessage) return;
+        try {
+            if (chatUpdate.type !== "notify") return;
 
-        const m = serialize(Atlas, msg);
-        
-        // --- DANTE OWNER VERIFICATION ---
-        const isDante = m.sender.includes("59945378676903") || 
-                        m.sender.includes("2348133453645") || 
-                        msg.key.fromMe;
-        
-        if (isDante) {
-            global.worktype = "public"; 
-            console.log(chalk.green(`[ EXEC ] Dante Command: ${m.body}`));
+            const msg = chatUpdate.messages[0];
+            if (!msg || !msg.message) return;
+            if (msg.message.protocolMessage) return;
+
+            const m = serialize(Atlas, msg);
+            if (!m) return;
+
+            // ✅ Owner check — works in BOTH groups and DMs
+            // fromMe = message sent by the bot number itself
+            const isFromMe = msg.key.fromMe === true;
+
+            // Strip device suffix like :3 from sender before comparing
+            const rawSender = (m.sender || "").replace(/:\d+@/, "@").replace(/@.+/, "");
+            const isOwner = OWNER_NUMBERS.some(num => rawSender === num);
+
+            if (!isFromMe && !isOwner) {
+                // Silently ignore — not the owner
+                return;
+            }
+
+            const chatType = m.chat?.endsWith("@g.us") ? "GROUP" : "DM";
+            console.log(chalk.green(`[ EXEC ] [${chatType}] Dante Command: ${m.body || "(media)"}`));
+
+            // ✅ Pass to core handler
             core(Atlas, m, commands, chatUpdate);
+
+        } catch (err) {
+            console.log(chalk.red("[ MSG ERROR ] " + err.message));
         }
     });
 };
 
-// --- CRITICAL RAILWAY HEALTH CHECK ---
+// ✅ Web UI — QR display + health check
 app.get("/", (req, res) => {
-    res.send(`<html><body style="background:#000;color:white;text-align:center;padding-top:100px;font-family:sans-serif;"><h1>Atlas-MD Dante</h1><div id="q"></div><script>async function u(){const r=await fetch('/api/qr');const d=await r.json();const q=document.getElementById('q');if(d.status==='qr')q.innerHTML='<img src="'+d.qr+'" style="background:white;padding:10px;"/>';else if(d.status==='connected')q.innerHTML='<h1 style="color:lime">ONLINE ✓</h1>';}setInterval(u,5000);u();</script></body></html>`);
+    res.send(`
+        <html>
+        <head><title>Atlas-MD Dante</title></head>
+        <body style="background:#0a0a0a;color:white;text-align:center;padding-top:80px;font-family:monospace;">
+            <h1 style="color:#00ff88;letter-spacing:4px;">ATLAS-MD DANTE</h1>
+            <p style="color:#888;">Private Mode — Owner Only</p>
+            <div id="qr" style="margin-top:30px;"></div>
+            <p id="status" style="color:#888;margin-top:20px;">Checking status...</p>
+            <script>
+                async function update() {
+                    try {
+                        const r = await fetch('/api/qr');
+                        const d = await r.json();
+                        const qr = document.getElementById('qr');
+                        const st = document.getElementById('status');
+                        if (d.status === 'qr') {
+                            qr.innerHTML = '<img src="' + d.qr + '" style="background:white;padding:12px;border-radius:8px;"/>';
+                            st.textContent = 'Scan the QR code with WhatsApp';
+                            st.style.color = '#ffcc00';
+                        } else if (d.status === 'connected') {
+                            qr.innerHTML = '<h2 style="color:#00ff88;font-size:3em;">✓ ONLINE</h2>';
+                            st.textContent = 'Bot is connected and running';
+                            st.style.color = '#00ff88';
+                        } else {
+                            st.textContent = 'Initializing... please wait';
+                            st.style.color = '#888';
+                        }
+                    } catch(e) {}
+                }
+                setInterval(update, 4000);
+                update();
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 app.get("/api/qr", async (req, res) => {
     if (status === "open") return res.json({ status: "connected" });
     if (QR_GENERATE === "invalid") return res.json({ status: "loading" });
-    res.json({ status: "qr", qr: await qrcode.toDataURL(QR_GENERATE) });
+    try {
+        const qrDataUrl = await qrcode.toDataURL(QR_GENERATE);
+        res.json({ status: "qr", qr: qrDataUrl });
+    } catch (e) {
+        res.json({ status: "loading" });
+    }
 });
 
-// --- REARRANGED BOOTSTRAP ---
+// ✅ Bootstrap — web server starts first so Railway doesn't kill the process
 const bootstrap = async () => {
-    // 1. Start Web Server immediately so Railway doesn't kill us
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(chalk.yellow(`[ SERVER ] Active on Port ${PORT}`));
+    // 1. Start HTTP server immediately (Railway health check)
+    app.listen(PORT, "0.0.0.0", () => {
+        console.log(chalk.yellow(`[ SERVER ] Running on port ${PORT}`));
     });
 
-    console.log(figlet.textSync("DANTE", { font: "Small" }));
+    console.log(chalk.cyan(figlet.textSync("DANTE", { font: "Small" })));
 
     try {
-        // 2. Database Connection
+        // 2. Connect to MongoDB
         await mongoose.connect(mongodb);
-        console.log(chalk.cyan("[ DB ] MongoDB Connected"));
+        console.log(chalk.cyan("[ DB ] MongoDB Connected ✓"));
 
-        // 3. Command & Plugin Load
+        // 3. Load plugins and commands
         await installPlugin();
         await readcommands();
-        
-        // 4. Start WhatsApp
+        console.log(chalk.cyan("[ COMMANDS ] Loaded ✓"));
+
+        // 4. Start WhatsApp connection
         await startAtlas();
+
     } catch (e) {
         console.error(chalk.red("[ CRITICAL ERROR ]"), e);
+        process.exit(1);
     }
 };
 
