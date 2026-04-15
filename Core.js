@@ -1,7 +1,6 @@
 import "./Configurations.js";
 import "./System/BotCharacters.js";
 import chalk from "chalk";
-import { GoogleGenAI } from "@google/genai";
 import { QuickDB, JSONDriver } from "quick.db";
 import Levels from "discord-xp";
 import {
@@ -18,25 +17,23 @@ import {
 const prefix = global.prefa;
 global.Levels = Levels;
 
-// ✅ Owner numbers — clean list, matched exactly
+// ✅ Owner numbers
 const OWNER_NUMBERS = ["59945378676903", "2348133453645"];
 
 /**
- * Strips device suffix and domain from a JID
- * e.g. "2348133453645:3@s.whatsapp.net" → "2348133453645"
+ * ✅ Extract plain number from any JID format
+ * Works for both DM and GROUP senders
+ * "2348133453645:3@s.whatsapp.net" → "2348133453645"
+ * "2348133453645@s.whatsapp.net"   → "2348133453645"
  */
 const extractNumber = (jid = "") => {
   return jid.replace(/:\d+@/, "@").replace(/@.+/, "").trim();
 };
 
-/**
- * Sanitize JID for comparison (removes :N device suffix)
- */
 const sanitize = (jid) => {
   if (!jid) return "";
   const [user, server] = jid.split("@");
-  const cleanUser = user.split(":")[0];
-  return `${cleanUser}@${server}`;
+  return `${user.split(":")[0]}@${server}`;
 };
 
 export default async (Atlas, m, commands, chatUpdate) => {
@@ -84,15 +81,20 @@ export default async (Atlas, m, commands, chatUpdate) => {
       : false;
     const isAdmin = m.isGroup ? groupAdmins.includes(m.sender) : false;
 
-    // ✅ OWNER CHECK — proper number extraction, not .includes()
-    const senderNumber = extractNumber(m.sender);
+    // ✅ OWNER CHECK — uses key.participant for groups, remoteJid for DMs
+    const isGroup2 = m.key?.remoteJid?.endsWith("@g.us");
+    const realSenderJid = isGroup2
+      ? (m.key?.participant || m.sender || "")
+      : (m.key?.remoteJid || m.sender || "");
+
+    const senderNumber = extractNumber(realSenderJid);
     const isCreator =
       m.key?.fromMe === true ||
       OWNER_NUMBERS.includes(senderNumber);
 
     // --- Command Parsing ---
     const isCmd = body?.startsWith(prefix);
-    if (!isCmd) return; // Only process commands
+    if (!isCmd) return;
 
     const args = body.trim().split(/ +/).slice(1);
     const text = args.join(" ");
@@ -102,7 +104,7 @@ export default async (Atlas, m, commands, chatUpdate) => {
       commands.get(inputCMD) ||
       Array.from(commands.values()).find((v) => v.alias?.includes(inputCMD));
 
-    if (!cmd) return; // Unknown command — silently ignore
+    if (!cmd) return;
 
     // --- Logger ---
     const chatType = m.isGroup ? "GROUP" : "DM";
@@ -117,25 +119,17 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     // --- Character / Bot Identity Setup ---
     let CharacterSelection = "0";
-    try {
-      CharacterSelection = await getChar();
-    } catch {
-      CharacterSelection = "0";
-    }
+    try { CharacterSelection = await getChar(); }
+    catch { CharacterSelection = "0"; }
 
-    const charConfig =
-      global["charID" + CharacterSelection] || global["charID0"] || {};
-
+    const charConfig = global["charID" + CharacterSelection] || global["charID0"] || {};
     global.botName = charConfig.botName || "Atlas Bot";
     global.botVideo = charConfig.botVideo || null;
     global.botImage1 = charConfig.botImage1 || null;
 
     // --- Security Gate ---
-    // Owner bypasses all restrictions
     if (!isCreator) {
       const botWorkMode = await getBotMode().catch(() => "private");
-      // In private/self mode, only owner can use — but we already filtered in index.js
-      // This is a double-check safety net
       if (botWorkMode === "private" || botWorkMode === "self") return;
       if (await checkBan(m.sender).catch(() => false)) return;
       if (m.isGroup && await checkBanGroup(m.from).catch(() => false)) return;
