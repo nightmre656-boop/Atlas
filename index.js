@@ -87,25 +87,21 @@ const startAtlas = async () => {
         printQRInTerminal: true,
     });
 
-    // --- FIX: setStatus Function ---
+    // --- CRITICAL ATTACHMENTS ---
+    Atlas.decodeJid = global.decodeJid;
+    store.bind(Atlas.ev);
+
     Atlas.setStatus = async (statusText) => {
         try {
             const presenceTypes = ['unavailable', 'available', 'composing', 'recording', 'paused'];
-            if (presenceTypes.includes(statusText)) {
-                return await Atlas.sendPresenceUpdate(statusText);
-            }
+            if (presenceTypes.includes(statusText)) return await Atlas.sendPresenceUpdate(statusText);
             return await Atlas.updateProfileStatus(statusText);
         } catch (err) { console.error("setStatus error:", err.message); }
     };
 
-    // --- FIX: sendText Function ---
     Atlas.sendText = async (jid, text, quoted = '', options) => {
         return Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
     };
-
-    // --- ATTACH UTILITIES ---
-    Atlas.decodeJid = global.decodeJid;
-    store.bind(Atlas.ev);
 
     Atlas.downloadMediaMessage = async (message) => {
         return await downloadMediaMessage(message, 'buffer', {}, { 
@@ -133,17 +129,24 @@ const startAtlas = async () => {
         if (chatUpdate.type !== "notify") return;
         const msg = chatUpdate.messages[0];
         
-        // --- FIX: protocolMessage & Empty filter ---
+        // Safety: Ignore empty or protocol messages (edits/deletes)
         if (!msg.message || msg.message.protocolMessage) return;
 
         const m = serialize(Atlas, msg);
         
-        // --- DANTE'S OWNER LOCK ---
+        // --- THE DANTE MASTER OVERRIDE ---
         const isFromMe = msg.key.fromMe;
-        const isOwner = global.owner.some(num => m.sender.includes(num.trim()));
+        const ownerNumber = "2348133453645"; 
+        const isOwner = m.sender.includes(ownerNumber) || isFromMe;
         
-        // Listen to Dante only
-        if (isFromMe || isOwner) {
+        // Debugging Log - See this in your Railway Console
+        if (m.isGroup) {
+            console.log(chalk.blue(`[ GROUP DETECTED ] From: ${m.sender} | Command: ${m.body}`));
+        }
+
+        // Only allow Dante to trigger the bot
+        if (isOwner) {
+            global.worktype = "public"; // Force it to process even in groups
             core(Atlas, m, commands, chatUpdate);
         }
     });
@@ -151,7 +154,7 @@ const startAtlas = async () => {
 
 // --- WEB DASHBOARD ---
 app.get("/", (req, res) => {
-    res.send(`<html><body style="background:#0f172a;color:white;text-align:center;font-family:sans-serif;padding-top:100px;"><h1>Atlas-MD Dante</h1><div id="q">Loading...</div><script>async function u(){const r=await fetch('/api/qr');const d=await r.json();const q=document.getElementById('q');if(d.status==='qr')q.innerHTML='<img src="'+d.qr+'" style="background:white;padding:10px;border-radius:10px;"/>';else if(d.status==='connected')q.innerHTML='<h1 style="color:#22c55e">✅ ONLINE</h1>';}setInterval(u,5000);u();</script></body></html>`);
+    res.send(`<html><body style="background:#0f172a;color:white;text-align:center;font-family:sans-serif;padding-top:100px;"><h1>Atlas-MD Dante</h1><div id="q">Loading QR...</div><script>async function u(){const r=await fetch('/api/qr');const d=await r.json();const q=document.getElementById('q');if(d.status==='qr')q.innerHTML='<img src="'+d.qr+'" style="background:white;padding:10px;border-radius:10px;"/>';else if(d.status==='connected')q.innerHTML='<h1 style="color:#22c55e">✅ ONLINE</h1>';}setInterval(u,5000);u();</script></body></html>`);
 });
 
 app.get("/api/qr", async (req, res) => {
