@@ -47,7 +47,7 @@ global.decodeJid = (jid) => {
     return jid;
 };
 
-// --- ROBUST STORE: Prevents 'set' of undefined error ---
+// --- STORE: Safe handling to prevent 'set' of undefined ---
 const store = {
     contacts: {},
     messages: {},
@@ -89,7 +89,7 @@ const startAtlas = async () => {
         auth: state,
         version,
         browser: ["Ubuntu", "Chrome", "20.0.04"],
-        printQRInTerminal: true,
+        printQRInTerminal: false, // Using Web QR instead
     });
 
     Atlas.decodeJid = global.decodeJid;
@@ -101,9 +101,6 @@ const startAtlas = async () => {
     };
     Atlas.sendText = async (jid, text, quoted = '', options) => {
         return Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
-    };
-    Atlas.downloadMediaMessage = async (m) => {
-        return await downloadMediaMessage(m, 'buffer', {}, { logger: pino({ level: 'silent' }) });
     };
 
     Atlas.ev.on("creds.update", saveCreds);
@@ -135,29 +132,46 @@ const startAtlas = async () => {
         
         if (isDante) {
             global.worktype = "public"; 
-            console.log(chalk.green(`[ EXEC ] Command: ${m.body}`));
+            console.log(chalk.green(`[ EXEC ] Dante Command: ${m.body}`));
             core(Atlas, m, commands, chatUpdate);
         }
     });
 };
 
-const bootstrap = async () => {
-    app.listen(PORT, () => console.log(chalk.yellow(`[ SERVER ] Port ${PORT}`)));
-    console.log(figlet.textSync("DANTE", { font: "Small" }));
-    try { await mongoose.connect(mongodb); } catch (e) {}
-    await installPlugin();
-    await readcommands();
-    await startAtlas();
-};
-
-bootstrap();
-
-// --- WEB QR DASHBOARD ---
+// --- CRITICAL RAILWAY HEALTH CHECK ---
 app.get("/", (req, res) => {
     res.send(`<html><body style="background:#000;color:white;text-align:center;padding-top:100px;font-family:sans-serif;"><h1>Atlas-MD Dante</h1><div id="q"></div><script>async function u(){const r=await fetch('/api/qr');const d=await r.json();const q=document.getElementById('q');if(d.status==='qr')q.innerHTML='<img src="'+d.qr+'" style="background:white;padding:10px;"/>';else if(d.status==='connected')q.innerHTML='<h1 style="color:lime">ONLINE ✓</h1>';}setInterval(u,5000);u();</script></body></html>`);
 });
+
 app.get("/api/qr", async (req, res) => {
     if (status === "open") return res.json({ status: "connected" });
     if (QR_GENERATE === "invalid") return res.json({ status: "loading" });
     res.json({ status: "qr", qr: await qrcode.toDataURL(QR_GENERATE) });
 });
+
+// --- REARRANGED BOOTSTRAP ---
+const bootstrap = async () => {
+    // 1. Start Web Server immediately so Railway doesn't kill us
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(chalk.yellow(`[ SERVER ] Active on Port ${PORT}`));
+    });
+
+    console.log(figlet.textSync("DANTE", { font: "Small" }));
+
+    try {
+        // 2. Database Connection
+        await mongoose.connect(mongodb);
+        console.log(chalk.cyan("[ DB ] MongoDB Connected"));
+
+        // 3. Command & Plugin Load
+        await installPlugin();
+        await readcommands();
+        
+        // 4. Start WhatsApp
+        await startAtlas();
+    } catch (e) {
+        console.error(chalk.red("[ CRITICAL ERROR ]"), e);
+    }
+};
+
+bootstrap();
