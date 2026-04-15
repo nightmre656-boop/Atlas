@@ -35,7 +35,6 @@ let QR_GENERATE = "invalid";
 let status = "initializing";
 const mongodb = global.mongodb;
 
-// --- GLOBAL JID DECODER ---
 global.decodeJid = (jid) => {
     if (!jid) return jid;
     if (/:\d+@/gi.test(jid)) {
@@ -45,15 +44,13 @@ global.decodeJid = (jid) => {
     return jid;
 };
 
-// --- INITIALIZE STORE PROPERLY ---
 const store = {
     contacts: {},
-    messages: {}, // This must be an empty object
+    messages: {},
     bind(ev) {
         ev.on("contacts.upsert", (contacts) => {
             for (const contact of contacts) store.contacts[contact.id] = contact;
         });
-        // Fix for the 'set' error:
         ev.on("messages.upsert", ({ messages }) => {
             const m = messages[0];
             if (!m.message) return;
@@ -90,6 +87,22 @@ const startAtlas = async () => {
         printQRInTerminal: true,
     });
 
+    // --- FIX: setStatus Function ---
+    Atlas.setStatus = async (statusText) => {
+        try {
+            const presenceTypes = ['unavailable', 'available', 'composing', 'recording', 'paused'];
+            if (presenceTypes.includes(statusText)) {
+                return await Atlas.sendPresenceUpdate(statusText);
+            }
+            return await Atlas.updateProfileStatus(statusText);
+        } catch (err) { console.error("setStatus error:", err.message); }
+    };
+
+    // --- FIX: sendText Function ---
+    Atlas.sendText = async (jid, text, quoted = '', options) => {
+        return Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
+    };
+
     // --- ATTACH UTILITIES ---
     Atlas.decodeJid = global.decodeJid;
     store.bind(Atlas.ev);
@@ -99,10 +112,6 @@ const startAtlas = async () => {
             logger: pino({ level: 'silent' }),
             reuploadRequest: Atlas.updateMediaMessage 
         });
-    };
-
-    Atlas.sendText = async (jid, text, quoted = '', options) => {
-        return Atlas.sendMessage(jid, { text: text, ...options }, { quoted });
     };
 
     Atlas.ev.on("creds.update", saveCreds);
@@ -123,22 +132,24 @@ const startAtlas = async () => {
     Atlas.ev.on("messages.upsert", async (chatUpdate) => {
         if (chatUpdate.type !== "notify") return;
         const msg = chatUpdate.messages[0];
-        if (!msg.message) return;
+        
+        // --- FIX: protocolMessage & Empty filter ---
+        if (!msg.message || msg.message.protocolMessage) return;
 
         const m = serialize(Atlas, msg);
         
-        // --- DANTE'S OWNER CHECK ---
+        // --- DANTE'S OWNER LOCK ---
         const isFromMe = msg.key.fromMe;
         const isOwner = global.owner.some(num => m.sender.includes(num.trim()));
         
-        // Let it run if it's from YOU or your OWNER number
+        // Listen to Dante only
         if (isFromMe || isOwner) {
             core(Atlas, m, commands, chatUpdate);
         }
     });
 };
 
-// --- DASHBOARD UI ---
+// --- WEB DASHBOARD ---
 app.get("/", (req, res) => {
     res.send(`<html><body style="background:#0f172a;color:white;text-align:center;font-family:sans-serif;padding-top:100px;"><h1>Atlas-MD Dante</h1><div id="q">Loading...</div><script>async function u(){const r=await fetch('/api/qr');const d=await r.json();const q=document.getElementById('q');if(d.status==='qr')q.innerHTML='<img src="'+d.qr+'" style="background:white;padding:10px;border-radius:10px;"/>';else if(d.status==='connected')q.innerHTML='<h1 style="color:#22c55e">✅ ONLINE</h1>';}setInterval(u,5000);u();</script></body></html>`);
 });
