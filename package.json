@@ -5,11 +5,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node --max-old-space-size=1024 --expose-gc index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@fantox01/search-it": "latest",
+    "@fantox01/lyrics-scraper": "latest",
     "@google/genai": "^0.7.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "6.7.0",
