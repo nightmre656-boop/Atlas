@@ -14,12 +14,10 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     if (!body || !body.startsWith(prefix)) return;
 
-    // --- Identification ---
     const senderNumber = extractNumber(m.sender);
     const isCreator = m.fromMe || OWNER_NUMBERS.includes(senderNumber);
     const botNumber = Atlas.user.id.split(":")[0] + "@s.whatsapp.net";
 
-    // --- Command Parsing ---
     const args = body.trim().split(/ +/).slice(1);
     const text = args.join(" ");
     const inputCMD = body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase();
@@ -27,17 +25,14 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     if (!cmd) return;
 
-    // --- SECURITY GATE (Public Mode Friendly) ---
+    // --- PUBLIC SECURITY GATE ---
     if (!isCreator) {
-      const botWorkMode = await getBotMode().catch(() => "public"); // Defaults to PUBLIC
-      if (botWorkMode === "private" || botWorkMode === "self") return; 
-      
-      // Ban Checks
+      const mode = await getBotMode().catch(() => "public");
+      if (mode === "private" || mode === "self") return;
       if (await checkBan(m.sender).catch(() => false)) return;
       if (isGroup && await checkBanGroup(m.from).catch(() => false)) return;
     }
 
-    // --- Admin Detection ---
     let isAdmin = false;
     let isBotAdmin = false;
     if (isGroup) {
@@ -49,12 +44,13 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     const doReact = (emoji) => Atlas.sendMessage(from, { react: { text: emoji, key: m.key } });
 
-    console.log(chalk.cyan(`[ EXEC ] ${inputCMD} from ${senderNumber}`));
+    console.log(chalk.cyan(`[ EXEC ] ${inputCMD} | Sender: ${senderNumber}`));
 
-    // --- Execute Command ---
     await cmd.start(Atlas, m, {
-      args, text, prefix, isCreator, isAdmin, isBotAdmin, db, doReact, commands
-    }).catch(e => console.error(cmd.name, e));
+      args, text, prefix, isCreator, isAdmin, isBotAdmin, db, doReact, commands,
+      pushName: m.pushName || "User",
+      participants: isGroup ? (await Atlas.groupMetadata(from)).participants : []
+    }).catch(e => console.error(chalk.red(`[ CMD ERROR ] ${cmd.name}:`), e.message));
 
-  } catch (e) { console.error("CORE ERROR", e); }
+  } catch (e) { console.error(chalk.red("[ CORE ERROR ]"), e.message); }
 };
