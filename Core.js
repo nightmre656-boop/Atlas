@@ -27,7 +27,6 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     let { type, isGroup, sender, from } = m;
 
-    // --- Body resolution ---
     let body =
       type === "buttonsResponseMessage"
         ? m.message[type].selectedButtonId
@@ -39,7 +38,6 @@ export default async (Atlas, m, commands, chatUpdate) => {
 
     let response = body?.startsWith(prefix) ? body : "";
 
-    // --- Metadata ---
     const metadata = m.isGroup ? await Atlas.groupMetadata(from).catch(() => ({})) : {};
     const pushname = m.pushName || "Dante User";
     const participants = m.isGroup ? metadata.participants || [] : [sender];
@@ -54,49 +52,40 @@ export default async (Atlas, m, commands, chatUpdate) => {
     const botIdClean = sanitize(botNumber);
     const botLid = Atlas.user?.lid ? sanitize(Atlas.user.lid) : botIdClean;
 
-    // --- Admin Checks ---
-    const groupAdmins = m.isGroup
-      ? participants.filter((p) => p.admin).map((p) => p.id)
-      : [];
-
+    const groupAdmins = m.isGroup ? participants.filter((p) => p.admin).map((p) => p.id) : [];
     const isBotAdmin = m.isGroup ? groupAdmins.includes(botIdClean) || groupAdmins.includes(botLid) : false;
     const isAdmin = m.isGroup ? groupAdmins.includes(m.sender) : false;
 
-    // --- OWNER & LID RECOGNITION (UNLOCKED) ---
-    const ownerDigits = new Set([botIdClean, ...global.owner].map((v) => v.replace(/[^0-9]/g, "")));
-    
-    // Explicitly allow Dante's LID and Phone Number
+    // --- OWNER CHECK ---
     const isCreator = 
-      ownerDigits.has(m.sender.replace(/[^0-9]/g, "")) || 
       m.sender.includes("59945378676903") || 
-      m.sender.includes("2348133453645");
+      m.sender.includes("2348133453645") ||
+      m.key.fromMe;
 
     const isCmd = body.startsWith(prefix);
     const args = body.trim().split(/ +/).slice(1);
     const text = args.join(" ");
     const inputCMD = body.slice(1).trim().split(/ +/).shift().toLowerCase();
 
-    // --- Command Lookup ---
     const cmdName = inputCMD;
     const cmd = commands.get(cmdName) || Array.from(commands.values()).find((v) => v.alias.includes(cmdName));
 
-    // --- LOGGING ---
-    const timeNow = new Date().toLocaleTimeString();
-    console.log(chalk.black(chalk.bgCyan(`[ ${timeNow} ]`)) + chalk.bgWhite(" [ EXEC ] ") + chalk.green(`${pushname}: ${body}`));
+    // --- THE FIX: Define doReact properly ---
+    const doReact = async (emoji) => {
+      return await Atlas.sendMessage(m.from, { react: { text: emoji, key: m.key } });
+    };
 
-    // --- BYPASS GATES ---
-    if (!cmd) return; // Not a command? Stop.
+    if (!cmd) return;
 
-    // If Dante is the one talking, ignore all "Private Mode" or "Banned" checks
+    // Gate Bypass
     if (!isCreator) {
         const isbannedUser = await checkBan(m.sender);
         if (isbannedUser) return;
-        
         const botWorkMode = await getBotMode();
         if (botWorkMode === "private") return;
     }
 
-    // --- Execute ---
+    // --- EXECUTE COMMAND ---
     try {
       await cmd.start(Atlas, m, {
         name: "Atlas",
@@ -113,6 +102,7 @@ export default async (Atlas, m, commands, chatUpdate) => {
         text,
         isCreator,
         quoted,
+        doReact, // Now passed correctly as a function
         isBotAdmin,
         prefix,
         db,
@@ -120,10 +110,10 @@ export default async (Atlas, m, commands, chatUpdate) => {
         commands
       });
     } catch (err) {
-      console.error("Command Error:", err);
+      console.error("Command Execution Error:", err);
     }
 
   } catch (e) {
-    console.error("Core Error:", e);
+    console.error("Core Processing Error:", e);
   }
 };
